@@ -1,23 +1,29 @@
 {
   "name": "com.unity.renderstreaming",
   "displayName": "Unity Render Streaming",
-  "version": "1.1.1-preview",
-  "unity": "2019.1",
-  "description": "This is HDRP sample scene project integrated with Unity Render Streaming technology.\n\nAlong with its signaling web server, you could play around the scene in any webrtc supported web browser.",
+  "version": "1.2.0-preview",
+  "unity": "2019.3",
+  "description": "This is a package for using Unity Render Streaming technology. It contains two samples to use the technology.",
   "dependencies": {
-    "com.unity.webrtc": "1.0.1-preview",
-    "com.unity.inputsystem": "0.9.6-preview"
+    "com.unity.webrtc": "1.1.0-preview",
+    "com.unity.inputsystem": "1.0.0-preview.4"
   },
   "samples": [
     {
       "displayName": "HDRP",
       "description": "HDRP Unity Render Streaming Sample",
       "path": "Samples~/HDRP"
+    },
+    {
+      "displayName": "URP",
+      "description": "URP Unity Render Streaming Sample",
+      "path": "Samples~/URP"
     }
   ],
   "repository": {
+    "footprint": "c192c7846987a7bc71d402b2aa6f314129fc402b",
     "type": "git",
-    "url": "git@github.com:Unity-Technologies/UnityRenderStreaming.git",
-    "revision": "1459daff9f8518047e7a2be4338ea21bce89b146"
+    "url": "https://github.com/Unity-Technologies/UnityRenderStreaming.git",
+    "revision": "49f7852ab89ed47542499cdc0fbf8533ec3eb52c"
   }
 }

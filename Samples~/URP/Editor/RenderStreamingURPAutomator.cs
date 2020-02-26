@@ -1,4 +1,4 @@
-﻿using System;                               //AssemblyLoadEventArgs 
+﻿using System;                               //AssemblyLoadEventArgs
 using System.Diagnostics;                   //StackTrace
 using System.IO;                            //Path
 using Unity.RenderStreaming.Editor;         //RequestJobManager
@@ -6,9 +6,9 @@ using UnityEditor.PackageManager;           //PackageCollection
 using UnityEditor.PackageManager.Requests;  //Request
 using UnityEngine;                          //ScriptableObject
 
-public class RenderStreamingHDRPAutomator 
+public class RenderStreamingURPAutomator
 {
-   
+
 //---------------------------------------------------------------------------------------------------------------------
     public static bool IsSampleImported() {
         return m_sampleImported;
@@ -16,7 +16,7 @@ public class RenderStreamingHDRPAutomator
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    public static void TryAddHDRPPackageAndImportSample() {
+    public static void TryAddURPPackageAndImportSample() {
         m_sampleImported = false;
 
         //Some steps are necessary to "hack" so that Unity will execute this file every time we click
@@ -44,21 +44,21 @@ public class RenderStreamingHDRPAutomator
         if (Application.isBatchMode)
             return;
 
-        TryAddHDRPPackageAndImportSample();
+        TryAddURPPackageAndImportSample();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     static void OnPackageListRequestSuccess(Request<PackageCollection> req) {
 
-        //Check if HDRP hasn't been installed and add it if that's the case
-        const string HDRP_PACKAGE_NAME = "com.unity.render-pipelines.high-definition";
-        PackageInfo packageInfo = req.FindPackage(HDRP_PACKAGE_NAME);
+        //Check if URP hasn't been installed and add it if that's the case
+        const string URP_PACKAGE_NAME = "com.unity.render-pipelines.universal";
+        PackageInfo packageInfo = req.FindPackage(URP_PACKAGE_NAME);
         if (null == packageInfo) {
             UnityEditor.EditorApplication.LockReloadAssemblies();
-            RequestJobManager.CreateAddRequest(HDRP_PACKAGE_NAME, OnHDRPPackageAdded, OnHDRPPackageAddFailed);
+            RequestJobManager.CreateAddRequest(URP_PACKAGE_NAME, OnURPPackageAdded, OnURPPackageAddFailed);
         } else {
-            ImportHDRPSample();
+            ImportURPSample();
         }
 
         //update json
@@ -79,21 +79,21 @@ public class RenderStreamingHDRPAutomator
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    static void OnHDRPPackageAdded(Request<PackageInfo> req) {
-        ImportHDRPSample();
-        UnityEditor.EditorApplication.UnlockReloadAssemblies();      
+    static void OnURPPackageAdded(Request<PackageInfo> req) {
+        ImportURPSample();
+        UnityEditor.EditorApplication.UnlockReloadAssemblies();
         m_sampleImported = true;
     }
-   
+
 //---------------------------------------------------------------------------------------------------------------------
-    static void OnHDRPPackageAddFailed(Request<PackageInfo> req) {
+    static void OnURPPackageAddFailed(Request<PackageInfo> req) {
         UnityEditor.EditorApplication.UnlockReloadAssemblies();
     }
 
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    static void ImportHDRPSample() {
+    static void ImportURPSample() {
         UnityEditor.EditorUtility.DisplayProgressBar(PROGRESS_BAR_TITLE, PROGRESS_BAR_INFO, 0.8f );
         UnityEditor.AssetDatabase.ImportPackage(m_unityPackageSamplePath, true);
         UnityEditor.EditorUtility.ClearProgressBar();
@@ -121,8 +121,8 @@ public class RenderStreamingHDRPAutomator
         m_codePath = path;
 
         string dir = Path.GetDirectoryName(path).Replace(@"\", "/" );
-        m_settingsPath = dir + "/RenderStreamingHDRPSettings.json";
-        m_unityPackageSamplePath =  dir + "/RenderStreamingHDRPSimple.unitypackage";
+        m_settingsPath = dir + "/RenderStreamingURPSettings.json";
+        m_unityPackageSamplePath =  dir + "/RenderStreamingURPSimple.unitypackage";
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -130,7 +130,7 @@ public class RenderStreamingHDRPAutomator
     static RenderStreamingSettings LoadSettings() {
         if (!File.Exists(m_settingsPath))
             return null;
-        
+
         return JsonUtility.FromJson<RenderStreamingSettings>(File.ReadAllText(m_settingsPath));
     }
 
@@ -156,7 +156,9 @@ public class RenderStreamingHDRPAutomator
     static bool m_sampleImported = false;
 
     const string PROGRESS_BAR_TITLE = "RenderStreaming";
-    const string PROGRESS_BAR_INFO  = "Installing HDRP Sample";
+    const string PROGRESS_BAR_INFO  = "Installing URP Sample";
 
 }
 
+
+//Automatically Modified to trigger recompilation
