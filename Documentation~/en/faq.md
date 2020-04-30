@@ -4,20 +4,28 @@
 
 ### Video stream not showing in browser
 
-The browser version might be too old. Make sure that the latest version is installed.
+The browser version might be too old. Make sure that the latest version is installed. Or firewall settings can also cause the issue, please try to turn it off once.
+
+Please check if there is any error log on the browser console and Unity debug console.
 
 ### Web app doesn't run on Safari browser
 
-Check the web server's [startup options](webserver.md). In **Safari** and **iOS Safari**, WebRTC features cannot be used with **http**. Instead, **https** must be used.
+Check the web server's [startup options](webapp.md). In **Safari** and **iOS Safari**, WebRTC features cannot be used with **http**. Instead, **https** must be used.
+Also, **iOS Safari** does not support WebSocket signaling if the server uses a self-signed certificate. Please check [here](signalingprotocol.md) for more information.
 
 ### Unity's initial startup fails
 
 Confirm you're using a `Graphics API` and compare [requirements](https://docs.unity3d.com/Packages/com.unity.webrtc@latest/en/overview.html) of `com.unity.webrtc`.
-Make sure you're using a graphics card that supports **Nvcodec**. Also confirm that the latest graphics driver version is installed. See also: `com.unity.webrtc` documentation.
+If you use the hardware encoder, Make sure you're using a graphics card that supports **Nvcodec**. Also confirm that the latest graphics driver version is installed. See also: `com.unity.webrtc` documentation.
 
 ### Web server fails to run 
 
 Make sure the port isn't being used by another service. 
+
+### uGUI can't be operated through a browser.
+
+It is only possible to operate when the focus is on the running application.
+This problem depends on the availability of `com.unity.inputsystem`.
 
 ## Issues with the environment
 
@@ -49,15 +57,15 @@ Currently, version 1.0 does not support simulcast.
 
 ### Can you broadcast the feed from multiple cameras?
 
-Currently, version 1.0 cannot.
+Yes. If you use the hardware encoder, make sure to check the limitation of the number of cameras used at the same time. See the NVIDIA [document](https://developer.nvidia.com/video-encode-decode-gpu-support-matrix).
 
 ### How do you increase the video quality?
 
-Video quality depends on the quality of the network. 
+You can set the resolution of the frame on the `CameraStreamer` inspector. Keep in mind that video quality depends on the quality of the network. 
 
 ### Is Realtime-Raytracing supported? 
 
-Currently, version 1.2 cannot.
+Yes. Please see the detail on the HDRP [document](https://docs.unity3d.com/Packages/com.unity.render-pipelines.high-definition@7.1/manual/Ray-Tracing-Getting-Started.html).
 
 ## Questions about support
 
