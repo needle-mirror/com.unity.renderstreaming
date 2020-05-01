@@ -11,6 +11,7 @@ Please check if there is any error log on the browser console and Unity debug co
 ### Web app doesn't run on Safari browser
 
 Check the web server's [startup options](webapp.md). In **Safari** and **iOS Safari**, WebRTC features cannot be used with **http**. Instead, **https** must be used.
+Also, **iOS Safari** does not support WebSocket signaling if the server uses a self-signed certificate. Please check [here](signalingprotocol.md) for more information.
 
 ### Unity's initial startup fails
 
@@ -20,6 +21,11 @@ If you use the hardware encoder, Make sure you're using a graphics card that sup
 ### Web server fails to run 
 
 Make sure the port isn't being used by another service. 
+
+### uGUI can't be operated through a browser.
+
+It is only possible to operate when the focus is on the running application.
+This problem depends on the availability of `com.unity.inputsystem`.
 
 ## Issues with the environment
 
