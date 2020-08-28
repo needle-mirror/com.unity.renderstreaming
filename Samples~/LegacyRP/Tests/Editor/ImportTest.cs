@@ -6,10 +6,10 @@ public class ImportTest
 {
     [UnityTest]
     [Timeout(3600000)] //1 hour
-    public IEnumerator ImportURPSampleTest() {
+    public IEnumerator ImportLegacyRPSampleTest() {
 
-        RenderStreamingURPAutomator.TryAddURPPackageAndImportSample();
-        while (!RenderStreamingURPAutomator.IsSampleImported()) {
+        RenderStreamingLegacyRPAutomator.TryAddLegacyRPPackageAndImportSample();
+        while (!RenderStreamingLegacyRPAutomator.IsSampleImported()) {
             yield return null;
         }
     }
