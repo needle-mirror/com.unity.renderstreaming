@@ -1,7 +1,7 @@
 {
   "name": "com.unity.renderstreaming",
   "displayName": "Unity Render Streaming",
-  "version": "3.0.0-preview.1",
+  "version": "3.0.1-preview",
   "unity": "2019.4",
   "description": "This is a package for using Unity Render Streaming technology. It contains two samples to use the technology.",
   "dependencies": {
@@ -16,11 +16,11 @@
     }
   ],
   "upmCi": {
-    "footprint": "c1560b9c1ca0d95fc643968a60c260b3ceae7b4a"
+    "footprint": "cbe62f773b614ee573138d157bab396293a30dd7"
   },
   "repository": {
     "url": "https://github.com/Unity-Technologies/UnityRenderStreaming.git",
     "type": "git",
-    "revision": "6e3492661dfc150a316e0c43e65019353d11793a"
+    "revision": "ec92d7059723d64dc86c6bf77d22be7d2b8c1411"
   }
 }
