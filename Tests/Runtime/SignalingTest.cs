@@ -68,6 +68,7 @@ namespace Unity.RenderStreaming.RuntimeTest
                 MockSignaling.Reset(false);
                 return;
             }
+
             m_ServerProcess = new Process();
 
             string fileName = TestUtility.GetWebAppLocationFromEnv();
@@ -108,7 +109,10 @@ namespace Unity.RenderStreaming.RuntimeTest
             {
                 return;
             }
-            m_ServerProcess.Kill();
+            m_ServerProcess?.Kill();
+            m_ServerProcess?.WaitForExit();
+            m_ServerProcess?.Dispose();
+            m_ServerProcess = null;
         }
 
         ISignaling CreateSignaling(Type type, SynchronizationContext mainThread)
@@ -146,8 +150,7 @@ namespace Unity.RenderStreaming.RuntimeTest
             MediaStream stream = WebRTC.Audio.CaptureStream();
             peer1.AddTrack(stream.GetTracks().First());
 
-            RTCOfferOptions offerOptions = new RTCOfferOptions();
-            var op1 = peer1.CreateOffer(ref offerOptions);
+            var op1 = peer1.CreateOffer();
             yield return op1;
             m_DescOffer = op1.Desc;
             var op2 = peer1.SetLocalDescription(ref m_DescOffer);
@@ -155,8 +158,7 @@ namespace Unity.RenderStreaming.RuntimeTest
             var op3 = peer2.SetRemoteDescription(ref m_DescOffer);
             yield return op3;
 
-            RTCAnswerOptions answerOptions = new RTCAnswerOptions();
-            var op4 = peer2.CreateAnswer(ref answerOptions);
+            var op4 = peer2.CreateAnswer();
             yield return op4;
             m_DescAnswer = op4.Desc;
             var op5 = peer2.SetLocalDescription(ref m_DescAnswer);
@@ -186,7 +188,7 @@ namespace Unity.RenderStreaming.RuntimeTest
             m_Context = null;
         }
 
-        [UnityTest]
+        [UnityTest, Timeout(10000)]
         public IEnumerator OnConnect()
         {
             bool startRaised1 = false;
@@ -196,20 +198,20 @@ namespace Unity.RenderStreaming.RuntimeTest
             signaling1.Start();
             yield return new WaitUntil(() => startRaised1);
 
-            signaling1.OnCreateConnection += (s, connectionId, peerExists) => { connectionId1 = connectionId; };
+            signaling1.OnCreateConnection += (s, connectionId, polite) => { connectionId1 = connectionId; };
             signaling1.OpenConnection(Guid.NewGuid().ToString());
             yield return new WaitUntil(() => !string.IsNullOrEmpty(connectionId1));
             Assert.IsNotEmpty(connectionId1);
         }
 
-        [UnityTest]
+        [UnityTest, Timeout(10000)]
         public IEnumerator OnOffer()
         {
             bool startRaised1 = false;
             bool startRaised2 = false;
             bool offerRaised = false;
-            bool peerExists1 = false;
-            bool peerExists2 = false;
+            bool raiseOnDestroy1 = false;
+            bool raiseOnDestroy2 = false;
             string connectionId1 = null;
             string connectionId2 = null;
             const string _connectionId = "12345";
@@ -220,15 +222,21 @@ namespace Unity.RenderStreaming.RuntimeTest
             signaling2.Start();
             yield return new WaitUntil(() => startRaised1 && startRaised2);
 
-            signaling1.OnCreateConnection += (s, connectionId, peerExists) => {
+            signaling1.OnCreateConnection += (s, connectionId, polite) => {
                 connectionId1 = connectionId;
-                peerExists1 = peerExists;
+            };
+            signaling1.OnDestroyConnection += (signaling, id) =>
+            {
+                raiseOnDestroy1 = id == connectionId1;
             };
             signaling1.OpenConnection(_connectionId);
 
-            signaling2.OnCreateConnection += (s, connectionId, peerExists) => {
+            signaling2.OnCreateConnection += (s, connectionId, polite) => {
                 connectionId2 = connectionId;
-                peerExists2 = peerExists;
+            };
+            signaling1.OnDestroyConnection += (signaling, id) =>
+            {
+                raiseOnDestroy2 = id == connectionId2;
             };
             signaling2.OpenConnection(_connectionId);
             yield return new WaitUntil(() =>
@@ -236,14 +244,19 @@ namespace Unity.RenderStreaming.RuntimeTest
 
             Assert.That(connectionId1, Is.EqualTo(_connectionId));
             Assert.That(connectionId2, Is.EqualTo(_connectionId));
-            Assert.That(peerExists1, Is.False);
-            Assert.That(peerExists2, Is.False);
+
             signaling2.OnOffer += (s, e) => { offerRaised = true; };
             signaling1.SendOffer(connectionId1, m_DescOffer);
             yield return new WaitUntil(() => offerRaised);
+
+            signaling1.CloseConnection(connectionId1);
+
+            yield return new WaitUntil(() => raiseOnDestroy1 && raiseOnDestroy2);
+            Assert.That(raiseOnDestroy1, Is.True);
+            Assert.That(raiseOnDestroy2, Is.True);
         }
 
-        [UnityTest]
+        [UnityTest, Timeout(10000)]
         public IEnumerator OnAnswer()
         {
             bool startRaised1 = false;
@@ -259,9 +272,13 @@ namespace Unity.RenderStreaming.RuntimeTest
             signaling2.Start();
             yield return new WaitUntil(() => startRaised1 && startRaised2);
 
-            signaling1.OnCreateConnection += (s, connectionId, peerExists) => { connectionId1 = connectionId; };
+            signaling1.OnCreateConnection += (s, connectionId, polite) => {
+                connectionId1 = connectionId;
+            };
             signaling1.OpenConnection(Guid.NewGuid().ToString());
-            signaling2.OnCreateConnection += (s, connectionId, peerExists) => { connectionId2 = connectionId; };
+            signaling2.OnCreateConnection += (s, connectionId, polite) => {
+                connectionId2 = connectionId;
+            };
             signaling2.OpenConnection(Guid.NewGuid().ToString());
             yield return new WaitUntil(() =>
                 !string.IsNullOrEmpty(connectionId1) && !string.IsNullOrEmpty(connectionId2));
@@ -275,7 +292,7 @@ namespace Unity.RenderStreaming.RuntimeTest
             yield return new WaitUntil(() => answerRaised);
         }
 
-        [UnityTest]
+        [UnityTest, Timeout(10000)]
         public IEnumerator OnCandidate()
         {
             bool startRaised1 = false;
@@ -293,9 +310,13 @@ namespace Unity.RenderStreaming.RuntimeTest
             signaling2.Start();
             yield return new WaitUntil(() => startRaised1 && startRaised2);
 
-            signaling1.OnCreateConnection += (s, connectionId, peerExists) => { connectionId1 = connectionId; };
+            signaling1.OnCreateConnection += (s, connectionId, polite) => {
+                connectionId1 = connectionId;
+            };
             signaling1.OpenConnection(Guid.NewGuid().ToString());
-            signaling2.OnCreateConnection += (s, connectionId, peerExists) => { connectionId2 = connectionId; };
+            signaling2.OnCreateConnection += (s, connectionId, polite) => {
+                connectionId2 = connectionId;
+            };
             signaling2.OpenConnection(Guid.NewGuid().ToString());
             yield return new WaitUntil(() =>
                 !string.IsNullOrEmpty(connectionId1) && !string.IsNullOrEmpty(connectionId2));

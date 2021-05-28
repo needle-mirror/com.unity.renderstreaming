@@ -4,14 +4,14 @@ using UnityEngine;
 namespace Unity.RenderStreaming
 {
     /// <summary>
-    /// 
+    ///
     /// </summary>
     public abstract class SignalingHandlerBase : MonoBehaviour
     {
         private IRenderStreamingHandler m_handler;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="connectionId"></param>
         public virtual void CreateConnection(string connectionId)
@@ -20,7 +20,7 @@ namespace Unity.RenderStreaming
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="connectionId"></param>
         public virtual void DeleteConnection(string connectionId)
@@ -29,7 +29,7 @@ namespace Unity.RenderStreaming
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="connectionId"></param>
         /// <returns></returns>
@@ -39,7 +39,7 @@ namespace Unity.RenderStreaming
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="connectionId"></param>
         /// <returns></returns>
@@ -49,7 +49,17 @@ namespace Unity.RenderStreaming
         }
 
         /// <summary>
-        /// 
+        ///
+        /// </summary>
+        /// <param name="connectionId"></param>
+        /// <returns></returns>
+        public virtual bool IsStable(string connectionId)
+        {
+            return m_handler.IsStable(connectionId);
+        }
+
+        /// <summary>
+        ///
         /// </summary>
         /// <param name="connectionId"></param>
         /// <param name="name"></param>
@@ -60,19 +70,28 @@ namespace Unity.RenderStreaming
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="connectionId"></param>
         /// <param name="track"></param>
         /// <returns></returns>
         public virtual RTCRtpTransceiver AddTrack(string connectionId, MediaStreamTrack track)
         {
-            var  transceiver = m_handler.AddTrack(connectionId, track);
-            return transceiver;
+            return m_handler.AddTrack(connectionId, track);
+        }
+
+        public virtual RTCRtpTransceiver AddTransceiver(string connectionId, MediaStreamTrack track, RTCRtpTransceiverDirection direction = RTCRtpTransceiverDirection.SendRecv)
+        {
+            return m_handler.AddTransceiver(connectionId, track, direction);
+        }
+
+        public virtual RTCRtpTransceiver AddTransceiver(string connectionId, TrackKind kind, RTCRtpTransceiverDirection direction = RTCRtpTransceiverDirection.SendRecv)
+        {
+            return m_handler.AddTransceiver(connectionId, kind, direction);
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="connectionId"></param>
         /// <param name="track"></param>
@@ -82,7 +101,7 @@ namespace Unity.RenderStreaming
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="connectionId"></param>
         public virtual void SendOffer(string connectionId)
@@ -91,7 +110,7 @@ namespace Unity.RenderStreaming
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="connectionId"></param>
         public virtual void SendAnswer(string connectionId)
@@ -106,38 +125,38 @@ namespace Unity.RenderStreaming
     }
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     public delegate void OnStartedStreamHandler(string connectionId);
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     public delegate void OnStoppedStreamHandler(string connectionId);
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     public delegate void OnStartedChannelHandler(string connectionId);
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     public delegate void OnStoppedChannelHandler(string connectionId);
 
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     public interface IStreamSource
     {
         /// <summary>
-        /// 
+        ///
         /// </summary>
         MediaStreamTrack Track { get; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="connectionId"></param>
         /// <param name="sender"></param>
@@ -145,17 +164,22 @@ namespace Unity.RenderStreaming
     }
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     public interface IStreamReceiver
     {
         /// <summary>
-        /// 
+        ///
         /// </summary>
         MediaStreamTrack Track { get; }
 
         /// <summary>
-        /// 
+        ///
+        /// </summary>
+        TrackKind Kind { get; }
+
+        /// <summary>
+        ///
         /// </summary>
         /// <param name="track"></param>
         void SetReceiver(string connectionId, RTCRtpReceiver sender);
@@ -164,22 +188,22 @@ namespace Unity.RenderStreaming
     public interface IDataChannel
     {
         /// <summary>
-        /// 
+        ///
         /// </summary>
         bool IsLocal { get; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         string Label { get; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         RTCDataChannel Channel { get; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="track"></param>
         void SetChannel(string connectionId, RTCDataChannel channel);

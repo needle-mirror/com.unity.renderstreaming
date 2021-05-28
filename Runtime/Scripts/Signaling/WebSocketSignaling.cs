@@ -18,6 +18,10 @@ namespace Unity.RenderStreaming.Signaling
         private AutoResetEvent m_wsCloseEvent;
         private WebSocket m_webSocket;
 
+        public string Url { get { return m_url; } }
+
+        public float Interval { get { return m_timeout; } }
+
         public WebSocketSignaling(string url, float timeout, SynchronizationContext mainThreadContext)
         {
             m_url = url;
@@ -47,8 +51,14 @@ namespace Unity.RenderStreaming.Signaling
             if (m_running)
             {
                 m_running = false;
-                m_webSocket?.Close();
-                m_signalingThread.Join();
+                if (m_signalingThread.ThreadState == ThreadState.WaitSleepJoin)
+                {
+                    m_signalingThread.Abort();
+                }
+                else
+                {
+                    m_signalingThread.Join(1000);
+                }
                 m_signalingThread = null;
             }
         }
@@ -125,9 +135,17 @@ namespace Unity.RenderStreaming.Signaling
             {
                 WSCreate();
 
-                m_wsCloseEvent.WaitOne();
+                try
+                {
+                    m_wsCloseEvent.WaitOne();
 
-                Thread.Sleep((int)(m_timeout * 1000));
+                    Thread.Sleep((int)(m_timeout * 1000));
+                }
+                catch (ThreadAbortException e)
+                {
+                    // Thread.Abort() called from main thread. Ignore
+                    return;
+                }
             }
 
             Debug.Log("Signaling: WS managing thread ended");
@@ -177,7 +195,7 @@ namespace Unity.RenderStreaming.Signaling
                     if (routedMessage.type == "connect")
                     {
                         msg = JsonUtility.FromJson<SignalingMessage>(content);
-                        m_mainThreadContext.Post(d => OnCreateConnection?.Invoke(this, msg.connectionId, msg.peerExists), null);
+                        m_mainThreadContext.Post(d => OnCreateConnection?.Invoke(this, msg.connectionId, msg.polite), null);
                     }
                     else if (routedMessage.type == "disconnect")
                     {
@@ -189,6 +207,7 @@ namespace Unity.RenderStreaming.Signaling
                         DescData offer = new DescData();
                         offer.connectionId = routedMessage.from;
                         offer.sdp = msg.sdp;
+                        offer.polite = msg.polite;
                         m_mainThreadContext.Post(d => OnOffer?.Invoke(this, offer), null);
                     }
                     else if (routedMessage.type == "answer")

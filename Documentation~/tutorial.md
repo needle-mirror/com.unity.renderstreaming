@@ -40,7 +40,7 @@ Check Package Manager window, Click `+` button and select `Add package from git 
 Input the string below to the input field.
 
 ```
-com.unity.renderstreaming@3.0.1-preview
+com.unity.renderstreaming@3.1.0-exp.1
 ```
 
 The list of version string is [here](https://github.com/Unity-Technologies/com.unity.renderstreaming/tags). In most cases, the latest version is recommended to use.
@@ -61,10 +61,25 @@ When the select download folder window appears, click on `Select Folder` to down
 
 ![Select Download folder](images/select_download_folder.png)
 
-After the download is finished and a new explorer window is opened, click on `webserver.exe` to start 
-Unity RenderStreaming web server.
+After the download is finished and a `powershell` or `cmd` window is opened, and run `webserver.exe` with `-w` option. Please refer to [this page](webapp.md) for commandline options.
 
-![Web Server](images/webserver.png)
+```
+.\webserver.exe -w
+```
+
+You can see logs on the commandline like below.
+
+![Launch web server](images/launch_webserver_public_mode_on_windows.png)
+
+If you use it on macOS or Linux, please run the command below to give the execute permission.
+
+```
+# for Linux
+chmod a+x ./webserver
+
+# for macOS
+chmod a+x ./webserver_mac
+```
 
 ## Install samples
 
@@ -90,10 +105,30 @@ You can see the Unity scene on the browser, and control a camera in the Unity sc
 
 ![Video player sample on the browser](images/browser_videoplayer.png)
 
+## Deploy to Furioos
+
+As you may already know, **Unity Render Streaming** has a Furioos-compatible signaling option. This means that you can build a dedicated version of your application, host it on **Furioos**, and share it with thousands of customers who will enjoy all the features of **Unity Render Streaming**. But you will **not** have to deal with any of the difficulties of setting up a private server, a machine in the cloud or manage the scalability of your solution.
+
+To do so, the requirement is to select "FurioosSignaling" in the "Signaling server type" parameter of the [RenderStreaming](components.md#render-streaming) component.
+This allow your application to connect to Furioos services when running on the managed virtual machines.
+
+![Selecting FurioosSignaling](images/furioos_signaling.png)
+
+Then just build a **standalone Windows version** of your application, and zip it! Don't try to build iOS, Android, linux or whatever version of your app, **Furioos only support Windows applications**. Also, be sure to zip the whole exported folder with all files and sub-folders, not just the ".exe" file.
+
+![Selecting FurioosSignaling](images/furioos_zip_folder.png)
+
+Finally just upload it on your account at https://portal.furioos.com/ .
+If you need futher help to upload your application on **Furioos**, please follow [this tutorial](https://support.furioos.com/article/adding-an-application-on-furioos/).
+
+You can check the stream type on https://portal.furioos.com/ by clicking to the "more options" button in the toolbar.
+
+![Selecting FurioosSignaling](images/furioos_stream_type.png)
+
 ## After tutorial
 
-About general questions, please see [FAQ](faq.md) page. About the operation of inspectors, please see [Components settings](components.md) page. 
+About general questions, please see [FAQ](faq.md) page. And you are available for discussions about Unity Render Streaming on [Unity Forum](https://forum.unity.com/forums/unity-render-streaming.413). 
 
+About the operation of inspectors, please see [Components settings](components.md) page. 
 About options of web application, please see [The web application](webapp.md) page.
-
 You can see more details for samples on the [Samples](samples.md) page.

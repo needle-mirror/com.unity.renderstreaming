@@ -32,6 +32,7 @@ namespace Unity.RenderStreaming.RuntimeTest.Signaling
                 list.Add(signaling);
                 signaling.OnStart?.Invoke(signaling);
             }
+
             public async Task Remove(MockSignaling signaling)
             {
                 await Task.Delay(MillisecondsDelay);
@@ -41,17 +42,22 @@ namespace Unity.RenderStreaming.RuntimeTest.Signaling
             public async Task OpenConnection(MockSignaling signaling, string connectionId)
             {
                 await Task.Delay(MillisecondsDelay);
-                signaling.OnCreateConnection?.Invoke(signaling, connectionId, false);
+                signaling.OnCreateConnection?.Invoke(signaling, connectionId, true);
             }
 
             public async Task CloseConnection(MockSignaling signaling, string connectionId)
             {
                 await Task.Delay(MillisecondsDelay);
-                signaling.OnDestroyConnection?.Invoke(signaling, connectionId);
+                foreach (var element in list)
+                {
+                    element.OnDestroyConnection?.Invoke(element, connectionId);
+                }
             }
+
             public async Task Offer(MockSignaling owner, DescData data)
             {
                 await Task.Delay(MillisecondsDelay);
+                data.polite = false;
                 foreach (var signaling in list.Where(e => e != owner))
                 {
                     signaling.OnOffer?.Invoke(signaling, data);
@@ -87,6 +93,7 @@ namespace Unity.RenderStreaming.RuntimeTest.Signaling
                 await Task.Delay(MillisecondsDelay);
                 signaling.OnStart?.Invoke(signaling);
             }
+
             public async Task Remove(MockSignaling signaling)
             {
                 await Task.Delay(MillisecondsDelay);
@@ -96,12 +103,14 @@ namespace Unity.RenderStreaming.RuntimeTest.Signaling
             {
                 await Task.Delay(MillisecondsDelay);
                 bool peerExists = connectionIds.TryGetValue(connectionId, out var list);
-                if(!peerExists)
+                if (!peerExists)
                 {
                     list = new List<MockSignaling>();
                     connectionIds.Add(connectionId, list);
                 }
+
                 list.Add(signaling);
+
                 signaling.OnCreateConnection?.Invoke(signaling, connectionId, peerExists);
             }
 
@@ -113,12 +122,17 @@ namespace Unity.RenderStreaming.RuntimeTest.Signaling
                 {
                     Debug.LogError($"{connectionId} This connection id is not used.");
                 }
+
+                foreach (var element in list)
+                {
+                    element.OnDestroyConnection?.Invoke(element, connectionId);
+                }
+
                 list.Remove(signaling);
                 if (list.Count == 0)
                 {
                     connectionIds.Remove(connectionId);
                 }
-                signaling.OnDestroyConnection?.Invoke(signaling, connectionId);
             }
 
             List<MockSignaling> FindList(MockSignaling owner, string connectionId)
@@ -127,11 +141,13 @@ namespace Unity.RenderStreaming.RuntimeTest.Signaling
                 {
                     return null;
                 }
+
                 list = list.Where(e => e != owner).ToList();
                 if (list.Count == 0)
                 {
                     return null;
                 }
+
                 return list;
             }
 
@@ -141,10 +157,12 @@ namespace Unity.RenderStreaming.RuntimeTest.Signaling
                 var list = FindList(owner, data.connectionId);
                 if (list == null)
                 {
-                    Debug.LogError($"{data.connectionId} This connection id is not ready other session.");
+                    Debug.LogWarning($"{data.connectionId} This connection id is not ready other session.");
                     return;
                 }
-                foreach (var signaling in list)
+
+                data.polite = true;
+                foreach (var signaling in list.Where(x => x != owner))
                 {
                     signaling.OnOffer?.Invoke(signaling, data);
                 }
@@ -156,10 +174,11 @@ namespace Unity.RenderStreaming.RuntimeTest.Signaling
                 var list = FindList(owner, data.connectionId);
                 if (list == null)
                 {
-                    Debug.LogError($"{data.connectionId} This connection id is not ready other session.");
+                    Debug.LogWarning($"{data.connectionId} This connection id is not ready other session.");
                     return;
                 }
-                foreach (var signaling in list)
+
+                foreach (var signaling in list.Where(x => x != owner))
                 {
                     signaling.OnAnswer?.Invoke(signaling, data);
                 }
@@ -174,6 +193,7 @@ namespace Unity.RenderStreaming.RuntimeTest.Signaling
                     Debug.LogWarning($"{data.connectionId} This connection id is not ready other session.");
                     return;
                 }
+
                 foreach (var signaling in list.Where(e => e != owner))
                 {
                     signaling.OnIceCandidate?.Invoke(signaling, data);
@@ -194,6 +214,10 @@ namespace Unity.RenderStreaming.RuntimeTest.Signaling
                 manager = new MockPublicSignalingManager();
             }
         }
+
+        public string Url { get { return string.Empty; } }
+
+        public float Interval { get { return 0.1f; } }
 
         static MockSignaling()
         {
@@ -219,7 +243,7 @@ namespace Unity.RenderStreaming.RuntimeTest.Signaling
 
         public void OpenConnection(string connectionId)
         {
-            if(string.IsNullOrEmpty(connectionId))
+            if (string.IsNullOrEmpty(connectionId))
                 throw new ArgumentException("connectionId is null or empty.");
             manager.OpenConnection(this, connectionId);
         }

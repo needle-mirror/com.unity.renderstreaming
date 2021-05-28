@@ -6,14 +6,13 @@ using UnityEngine;
 namespace Unity.RenderStreaming
 {
     public class SingleConnection : SignalingHandlerBase,
-        ICreatedConnectionHandler, IFoundConnectionHandler, IDeletedConnectionHandler,
+        ICreatedConnectionHandler, IDeletedConnectionHandler,
         IAddReceiverHandler, IOfferHandler, IAddChannelHandler
     {
         [SerializeField]
         private List<Component> streams = new List<Component>();
 
         private string connectionId;
-        private bool sendOffer;
 
         public void AddComponent(Component component)
         {
@@ -23,13 +22,6 @@ namespace Unity.RenderStreaming
         public void RemoveComponent(Component component)
         {
             streams.Remove(component);
-        }
-
-        //todo(kazuki):: sendOffer flag is for workaround
-        public void CreateConnection(string connectionId, bool sendOffer)
-        {
-            this.sendOffer = sendOffer;
-            CreateConnection(connectionId);
         }
 
         public override void CreateConnection(string connectionId)
@@ -64,20 +56,19 @@ namespace Unity.RenderStreaming
             if (data.connectionId != connectionId)
                 return;
 
-            // Send offer explicitly when the media source is nothing
+            foreach (var source in streams.OfType<IStreamSource>())
             {
-                foreach (var source in streams.OfType<IStreamSource>())
-                {
-                    var transceiver = AddTrack(connectionId, source.Track);
-                    source.SetSender(connectionId, transceiver.Sender);
-                }
-                foreach (var channel in streams.OfType<IDataChannel>().Where(c => c.IsLocal))
-                {
-                    var _channel = CreateChannel(connectionId, channel.Label);
-                    channel.SetChannel(connectionId, _channel);
-                }
-                if (sendOffer)
-                    SendOffer(connectionId);
+                var transceiver = AddTransceiver(connectionId, source.Track, RTCRtpTransceiverDirection.SendOnly);
+                source.SetSender(connectionId, transceiver.Sender);
+            }
+            foreach (var receiver in streams.OfType<IStreamReceiver>())
+            {
+                AddTransceiver(data.connectionId, receiver.Kind, RTCRtpTransceiverDirection.RecvOnly);
+            }
+            foreach (var channel in streams.OfType<IDataChannel>().Where(c => c.IsLocal))
+            {
+                var _channel = CreateChannel(connectionId, channel.Label);
+                channel.SetChannel(connectionId, _channel);
             }
         }
 
@@ -98,32 +89,6 @@ namespace Unity.RenderStreaming
                 channel.SetChannel(connectionId, null);
             }
             connectionId = null;
-        }
-
-        public void OnFoundConnection(SignalingEventData data)
-        {
-            if (data.connectionId != connectionId)
-                return;
-
-            // Send offer explicitly when the media source is nothing
-            if (!streams.OfType<IStreamSource>().Any() &&
-                !streams.OfType<IDataChannel>().Any(c => c.IsLocal))
-            {
-                SendOffer(connectionId);
-            }
-            else
-            {
-                foreach (var source in streams.OfType<IStreamSource>())
-                {
-                    var transceiver = AddTrack(connectionId, source.Track);
-                    source.SetSender(connectionId, transceiver.Sender);
-                }
-                foreach (var channel in streams.OfType<IDataChannel>().Where(c => c.IsLocal))
-                {
-                    var _channel = CreateChannel(connectionId, channel.Label);
-                    channel.SetChannel(connectionId, _channel);
-                }
-            }
         }
 
         public void OnOffer(SignalingEventData data)

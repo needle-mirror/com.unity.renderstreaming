@@ -4,11 +4,12 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 using Gyroscope = UnityEngine.InputSystem.Gyroscope;
 
-namespace Unity.RenderStreaming
+namespace Unity.RenderStreaming.Samples
 {
-    public class GyroSample : MonoBehaviour
+    class GyroSample : MonoBehaviour
     {
 #pragma warning disable 0649
+            [SerializeField] private RenderStreaming renderStreaming;
             [SerializeField] private Button sendOfferButton;
             [SerializeField] private RawImage remoteVideoImage;
             [SerializeField] private ReceiveVideoViewer receiveVideoViewer;
@@ -29,6 +30,19 @@ namespace Unity.RenderStreaming
             receiveVideoViewer.OnUpdateReceiveTexture += texture => remoteVideoImage.texture = texture;
         }
 
+        void OnDestroy()
+        {
+            InputSystem.DisableDevice(Gyroscope.current);
+        }
+
+        void Start()
+        {
+            if (renderStreaming.runOnAwake)
+                return;
+            renderStreaming.Run(
+                hardwareEncoder: RenderStreamingSettings.EnableHWCodec,
+                signaling: RenderStreamingSettings.Signaling);
+        }
 
         void OnEnable()
         {
@@ -60,7 +74,7 @@ namespace Unity.RenderStreaming
         void SendOffer()
         {
             var connectionId = System.Guid.NewGuid().ToString("N");
-            connection.CreateConnection(connectionId, true);
+            connection.CreateConnection(connectionId);
         }
     }
 }

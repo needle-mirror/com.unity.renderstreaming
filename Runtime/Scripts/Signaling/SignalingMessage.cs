@@ -1,6 +1,4 @@
 using System;
-using UnityEngine;
-using UnityEngine.Networking;
 
 namespace Unity.RenderStreaming
 {
@@ -12,7 +10,7 @@ namespace Unity.RenderStreaming
         public string message;
         public string sessionId;
         public string connectionId;
-        public bool peerExists;
+        public bool polite;
         public string sdp;
         public string type;
         public string candidate;
@@ -35,6 +33,7 @@ namespace Unity.RenderStreaming
         public string connectionId;
         public string sdp;
         public string type;
+        public bool polite;
     }
 
     [Serializable]
@@ -47,13 +46,19 @@ namespace Unity.RenderStreaming
     class CreateConnectionResData
     {
         public string connectionId;
-        public bool peerExists;
+        public bool polite;
     }
 
     [Serializable]
     class DestroyConnectionResData
     {
         public string connectionId;
+    }
+
+    [Serializable]
+    class ConnectionResDataList
+    {
+        public DescData[] connections;
     }
 
     [Serializable]

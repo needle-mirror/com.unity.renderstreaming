@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Unity.RenderStreaming
 {
     /// <summary>
-    /// 
+    ///
     /// </summary>
     public abstract class StreamReceiverBase : MonoBehaviour, IStreamReceiver
     {
@@ -16,12 +16,18 @@ namespace Unity.RenderStreaming
         public OnStoppedStreamHandler OnStoppedStream { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public MediaStreamTrack Track { get; private set; }
 
         /// <summary>
-        /// 
+        ///
+        /// </summary>
+        public virtual TrackKind Kind { get; }
+
+
+        /// <summary>
+        ///
         /// </summary>
         /// <param name="track"></param>
         public virtual void SetReceiver(string connectionId, RTCRtpReceiver receiver)

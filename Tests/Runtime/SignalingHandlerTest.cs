@@ -36,8 +36,9 @@ namespace Unity.RenderStreaming.RuntimeTest
         }
     }
 
-    class StreamReceiverTest : StreamReceiverBase
+    class VideoStreamReceiverTest : StreamReceiverBase
     {
+        public override TrackKind Kind { get { return TrackKind.Video; } }
     }
 
     class DataChannelTest : DataChannelBase
@@ -75,7 +76,8 @@ namespace Unity.RenderStreaming.RuntimeTest
                     iceServers = new[] { new RTCIceServer { urls = new[] { "stun:stun.l.google.com:19302" } } },
                 },
                 encoderType = EncoderType.Software,
-                startCoroutine = behaviour.StartCoroutine
+                startCoroutine = behaviour.StartCoroutine,
+                resentOfferInterval = 1.0f,
             };
         }
 
@@ -108,9 +110,9 @@ namespace Unity.RenderStreaming.RuntimeTest
             MockSignaling.Reset(false);
         }
 
-        // todo(kazuki): the software encoder is not supported on Linux
+        //todo:: crash in dispose process on standalone linux
         [Test]
-        [UnityPlatform(exclude = new[] { RuntimePlatform.LinuxEditor, RuntimePlatform.LinuxPlayer })]
+        [UnityPlatform(exclude = new[] { RuntimePlatform.LinuxPlayer})]
         public void AddStreamSource()
         {
             var container = TestContainer<BroadcastBehaviourTest>.Create("test");
@@ -138,9 +140,9 @@ namespace Unity.RenderStreaming.RuntimeTest
             container.Dispose();
         }
 
-        // todo(kazuki): the software encoder is not supported on Linux
-        [UnityTest, Timeout(3000)]
-        [UnityPlatform(exclude = new[] { RuntimePlatform.LinuxEditor, RuntimePlatform.LinuxPlayer })]
+        //todo:: crash in dispose process on standalone linux
+        [UnityTest, Timeout(10000)]
+        [UnityPlatform(exclude = new[] { RuntimePlatform.LinuxPlayer})]
         public IEnumerator ReceiveStream()
         {
             string connectionId = "12345";
@@ -155,19 +157,19 @@ namespace Unity.RenderStreaming.RuntimeTest
 
             container1.test.component.AddComponent(streamer);
 
-            var receiver = container2.test.gameObject.AddComponent<StreamReceiverTest>();
+            var receiver = container2.test.gameObject.AddComponent<VideoStreamReceiverTest>();
             bool isStartedStream2 = false;
             bool isStoppedStream2 = false;
 
             receiver.OnStartedStream += _ => isStartedStream2 = true;
             receiver.OnStoppedStream += _ => isStoppedStream2 = true;
             container2.test.component.AddComponent(receiver);
-            container2.test.component.CreateConnection(connectionId, true);
+            container2.test.component.CreateConnection(connectionId);
 
             yield return new WaitUntil(() => isStartedStream2 && isStartedStream1);
             Assert.That(isStartedStream1, Is.True);
             Assert.That(isStartedStream2, Is.True);
-            
+
             Assert.That(receiver.Track, Is.Not.Null);
             Assert.That(receiver.Receiver, Is.Not.Null);
 
@@ -193,9 +195,9 @@ namespace Unity.RenderStreaming.RuntimeTest
             MockSignaling.Reset(true);
         }
 
-        // todo(kazuki): the software encoder is not supported on Linux
-        [UnityTest, Timeout(3000)]
-        [UnityPlatform(exclude = new[] { RuntimePlatform.LinuxEditor, RuntimePlatform.LinuxPlayer })]
+        //todo:: crash in dispose process on standalone linux
+        [UnityTest, Timeout(10000)]
+        [UnityPlatform(exclude = new[] { RuntimePlatform.LinuxPlayer})]
         public IEnumerator AddStreamSource()
         {
             string connectionId = "12345";
@@ -217,7 +219,7 @@ namespace Unity.RenderStreaming.RuntimeTest
             container.Dispose();
         }
 
-        [UnityTest, Timeout(3000)]
+        [UnityTest, Timeout(10000)]
         public IEnumerator AddDataChannel()
         {
             string connectionId = "12345";
@@ -243,9 +245,9 @@ namespace Unity.RenderStreaming.RuntimeTest
             container.Dispose();
         }
 
-        // todo(kazuki): the software encoder is not supported on Linux
-        [UnityTest, Timeout(3000)]
-        [UnityPlatform(exclude = new[] { RuntimePlatform.LinuxEditor, RuntimePlatform.LinuxPlayer })]
+        //todo:: crash in dispose process on standalone linux
+        [UnityTest, Timeout(10000)]
+        [UnityPlatform(exclude = new[] { RuntimePlatform.LinuxPlayer})]
         public IEnumerator ReceiveStream()
         {
             string connectionId = "12345";
@@ -265,7 +267,7 @@ namespace Unity.RenderStreaming.RuntimeTest
             yield return new WaitUntil(() => isStartedStream0);
             Assert.That(isStartedStream0, Is.True);
 
-            var receiver = container2.test.gameObject.AddComponent<StreamReceiverTest>();
+            var receiver = container2.test.gameObject.AddComponent<VideoStreamReceiverTest>();
             bool isStartedStream1 = false;
             bool isStoppedStream1 = false;
             receiver.OnStartedStream += _ => isStartedStream1 = true;
@@ -295,7 +297,9 @@ namespace Unity.RenderStreaming.RuntimeTest
             container2.Dispose();
         }
 
-        [UnityTest, Timeout(3000)]
+        //todo(kazuki):: Unknown error is occurred on Android
+        [UnityTest, Timeout(10000)]
+        [UnityPlatform(exclude = new[] { RuntimePlatform.Android })]
         public IEnumerator ReceiveDataChannel()
         {
             string connectionId = "12345";

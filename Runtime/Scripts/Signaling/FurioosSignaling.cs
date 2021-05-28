@@ -34,6 +34,10 @@ namespace Unity.RenderStreaming.Signaling
 
         public delegate void OnSignedInHandler(ISignaling sender);
 
+        public string Url { get { return string.Empty; } }
+
+        public float Interval { get { return m_timeout; } }
+
         public FurioosSignaling(string url, float timeout, SynchronizationContext mainThreadContext)
         {
             m_timeout = timeout;
@@ -58,8 +62,19 @@ namespace Unity.RenderStreaming.Signaling
 
         public void Stop()
         {
-            m_running = false;
-            m_webSocket?.Close();
+            if (m_running)
+            {
+                m_running = false;
+                if (m_signalingThread.ThreadState == ThreadState.WaitSleepJoin)
+                {
+                    m_signalingThread.Abort();
+                }
+                else
+                {
+                    m_signalingThread.Join(1000);
+                }
+                m_signalingThread = null;
+            }
         }
 
         //todo(kazuki):: remove warning CS0067
@@ -69,7 +84,6 @@ namespace Unity.RenderStreaming.Signaling
         public event OnConnectHandler OnCreateConnection;
         public event OnDisconnectHandler OnDestroyConnection;
         public event OnOfferHandler OnOffer;
-        // this event is never used in this class
         public event OnAnswerHandler OnAnswer;
         public event OnIceCandidateHandler OnIceCandidate;
 #pragma warning restore 0067
@@ -171,7 +185,7 @@ namespace Unity.RenderStreaming.Signaling
                         if (msg.status == "SUCCESS")
                         {
                             Debug.Log("Signaling: Slot signed in.");
-                            this.WSSend("{\"type\":\"furioos\",\"task\":\"enableStreaming\",\"streamTypes\":\"WebRTC\",\"controlType\":\"RenderStreaming\"}");
+                            this.WSSend("{\"type\":\"furioos\",\"task\":\"enableStreaming\",\"streamType\":\"RenderStreaming\",\"streamProtocols\":[\"WebRTC\"],\"controlsTypes\":[\"RenderStreaming\"]}");
 
                             OnSignedIn?.Invoke(this);
                         }
@@ -199,6 +213,7 @@ namespace Unity.RenderStreaming.Signaling
                             DescData offer = new DescData();
                             offer.connectionId = routedMessage.from;
                             offer.sdp = msg.sdp;
+                            offer.polite = false;
 
                             m_mainThreadContext.Post(d => OnOffer?.Invoke(this, offer), null);
                         }
@@ -246,7 +261,7 @@ namespace Unity.RenderStreaming.Signaling
 
         private void WSClosed(object sender, CloseEventArgs e)
         {
-            Debug.LogError($"Signaling: WS connection closed, code: {e.Code}");
+            Debug.Log($"Signaling: WS connection closed, code: {e.Code}");
 
             m_wsCloseEvent.Set();
             m_webSocket = null;
