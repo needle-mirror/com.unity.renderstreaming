@@ -1,17 +1,14 @@
-// todo(kazuki):: This script should be moved into the WebRTC package.
-// #if UNITY_WEBRTC_ENABLE_INPUT_SYSTEM
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Unity.WebRTC;
-using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.InputSystem.Utilities;
 
-// namespace Unity.WebRTC.InputSystem
-namespace Unity.RenderStreaming
+namespace Unity.RenderStreaming.InputSystem
 {
+    using InputSystem = UnityEngine.InputSystem.InputSystem;
+
     class Sender : InputManager, IDisposable
     {
         public override event Action<InputEventPtr, InputDevice> onEvent;
@@ -41,10 +38,7 @@ namespace Unity.RenderStreaming
         {
             get
             {
-                // note:: InputRemoting class rejects remote devices when sending device information to the remote peer.
-                // Avoid to get assert "Device being sent to remotes should be a local device, not a remote one"
-                var localDevices = InputSystem.devices.Where(device => !device.remote);
-                return new ReadOnlyArray<InputDevice>(localDevices.ToArray());
+                return InputSystem.devices;
             }
         }
 
@@ -77,17 +71,13 @@ namespace Unity.RenderStreaming
     class Observer : IObserver<InputRemoting.Message>
     {
         private RTCDataChannel _channel;
-        private bool _isOpen;
         public Observer(RTCDataChannel channel)
         {
             _channel = channel ?? throw new ArgumentNullException("channel is null");
-            _channel.OnOpen += () => { _isOpen = true; };
-            _channel.OnClose += () => { _isOpen = false; };
-            _isOpen = _channel.ReadyState == RTCDataChannelState.Open;
         }
         public void OnNext(InputRemoting.Message value)
         {
-            if (!_isOpen)
+            if (_channel.ReadyState != RTCDataChannelState.Open)
                 return;
             byte[] bytes = MessageSerializer.Serialize(ref value);
             _channel.Send(bytes);

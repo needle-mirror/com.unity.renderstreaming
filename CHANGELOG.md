@@ -4,11 +4,54 @@ All notable changes to com.unity.renderstreaming package will be documented in t
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [3.1.0-exp.1] - 2021-05-28
+## [3.1.0-exp.2] - 2021-12-01
+
+### Added
+
+- Added audio streaming receiver.
+- Added the `Multiplay` scene into samples.
+- Added components for streaming.
+  - `MicrophoneStreamSender`
+  - `AudioStreamReceiver`
+  - `ScreenStreamSender`
+- Added components for controlling user input.
+  - `InputSender`
+  - `InputReceiver`
+
+### Changed
+
+- Upgraded WebRTC package to `2.4.0-exp.4`.
+- Upgraded Input System package to `1.0.2`.
+- Renamed components.
+  - `CameraStreamer` -> `CameraStreamSender`
+  - `ReceiveVideoViewer` -> `VideoStreamReceiver`
+  - `WebCamStreamer` -> `WebCamStreamSender`
+  - `AudioStreamer` -> `AudioStreamSender`
+  - `InputSystemChannnelSender` -> `InputSender`
+  - `InputSystemChannnelReceiver` -> `InputReceiver`
+- Improved controlling user input from browsers.
+- Updated manual documents.
+
+### Fixed
+
+- Fixed resource leak of sender stream tracks.
+
+## [3.1.0-exp.1] - 2021-06-15
 
 ### Added
 
 - Android platform support
+- Added the Menu scene into samples
+
+### Changed
+
+- Added drop-down list UI for selecting the video capture device in the `Bidirectional` scene
+- Changed the signaling process for exchanging SDPs
+
+### Fixed
+
+- Fixed errors when disposing the scene while streaming video
+- Fixed the long processing time when disposing the signaling instance
 
 ## [3.0.1-preview] - 2021-03-04
 

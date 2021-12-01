@@ -4,10 +4,10 @@ using System.Net;
 
 namespace Unity.RenderStreaming.Editor
 {
-    public static class WebAppDownloader
+    internal static class WebAppDownloader
     {
         const string URLRoot = "https://github.com/Unity-Technologies/UnityRenderStreaming";
-        const string LatestKnownVersion = "3.1.0-exp.1";
+        const string LatestKnownVersion = "3.1.0-exp.2";
 
         // TODO::fix release process of webserver runtime.
         const string FileNameWebAppForMac = "webserver_mac";

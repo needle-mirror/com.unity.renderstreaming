@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using Unity.WebRTC;
 using UnityEngine;
 
 namespace Unity.RenderStreaming
@@ -34,19 +33,7 @@ namespace Unity.RenderStreaming
         {
             if (this.connectionId != connectionId)
                 return;
-
-            foreach (var source in streams.OfType<IStreamSource>())
-            {
-                source.SetSender(connectionId, null);
-            }
-            foreach (var receiver in streams.OfType<IStreamReceiver>())
-            {
-                receiver.SetReceiver(connectionId, null);
-            }
-            foreach (var channel in streams.OfType<IDataChannel>())
-            {
-                channel.SetChannel(connectionId, null);
-            }
+            Disconnect(connectionId);
             base.DeleteConnection(connectionId);
             this.connectionId = null;
         }
@@ -56,19 +43,13 @@ namespace Unity.RenderStreaming
             if (data.connectionId != connectionId)
                 return;
 
-            foreach (var source in streams.OfType<IStreamSource>())
+            foreach (var sender in streams.OfType<IStreamSender>())
             {
-                var transceiver = AddTransceiver(connectionId, source.Track, RTCRtpTransceiverDirection.SendOnly);
-                source.SetSender(connectionId, transceiver.Sender);
-            }
-            foreach (var receiver in streams.OfType<IStreamReceiver>())
-            {
-                AddTransceiver(data.connectionId, receiver.Kind, RTCRtpTransceiverDirection.RecvOnly);
+                AddSender(connectionId, sender);
             }
             foreach (var channel in streams.OfType<IDataChannel>().Where(c => c.IsLocal))
             {
-                var _channel = CreateChannel(connectionId, channel.Label);
-                channel.SetChannel(connectionId, _channel);
+                AddChannel(connectionId, channel);
             }
         }
 
@@ -76,19 +57,24 @@ namespace Unity.RenderStreaming
         {
             if (data.connectionId != connectionId)
                 return;
-            foreach (var source in streams.OfType<IStreamSource>())
+            Disconnect(connectionId);
+            connectionId = null;
+        }
+
+        private void Disconnect(string connectionId)
+        {
+            foreach (var sender in streams.OfType<IStreamSender>())
             {
-                source.SetSender(connectionId, null);
+                RemoveSender(connectionId, sender);
             }
             foreach (var receiver in streams.OfType<IStreamReceiver>())
             {
-                receiver.SetReceiver(connectionId, null);
+                RemoveReceiver(connectionId, receiver);
             }
             foreach (var channel in streams.OfType<IDataChannel>())
             {
-                channel.SetChannel(connectionId, null);
+                RemoveChannel(connectionId, channel);
             }
-            connectionId = null;
         }
 
         public void OnOffer(SignalingEventData data)
@@ -102,10 +88,9 @@ namespace Unity.RenderStreaming
         {
             if (data.connectionId != connectionId)
                 return;
-            if (data.receiver.Track.Kind != TrackKind.Video)
-                return;
-            var receiver = streams.OfType<IStreamReceiver>().
-                FirstOrDefault(r => r.Track == null);
+
+            var receiver = streams.OfType<IStreamReceiver>()
+                .FirstOrDefault((r => r.Track == null && r.Kind == data.receiver.Track.Kind && data.receiver.Track.Enabled));
             receiver?.SetReceiver(connectionId, data.receiver);
         }
 
@@ -114,7 +99,7 @@ namespace Unity.RenderStreaming
             if (data.connectionId != connectionId)
                 return;
             var channel = streams.OfType<IDataChannel>().
-                FirstOrDefault(r => r.Channel == null && !r.IsLocal);
+                FirstOrDefault(r => !r.IsConnected && !r.IsLocal);
             channel?.SetChannel(connectionId, data.channel);
         }
     }

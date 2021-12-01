@@ -11,11 +11,11 @@ Please check if there is any error log on the browser console and Unity debug co
 ### Web app doesn't run on Safari browser
 
 Check the web server's [startup options](webapp.md). In **Safari** and **iOS Safari**, WebRTC features cannot be used with **http**. Instead, **https** must be used.
-Also, **iOS Safari** does not support WebSocket signaling if the server uses a self-signed certificate. Please check [here](signalingprotocol.md) for more information.
+Also, **iOS Safari** does not support WebSocket signaling if the server uses a self-signed certificate. Please check [here](signaling-type.md) for more information.
 
 ### Unity's initial startup fails
 
-Confirm you're using a `Graphics API` and compare [requirements](https://docs.unity3d.com/Packages/com.unity.webrtc@2.2/overview.html) of `com.unity.webrtc`.
+Confirm you're using a `Graphics API` and compare [requirements](https://docs.unity3d.com/Packages/com.unity.webrtc@latest) of `com.unity.webrtc`.
 If you use the hardware encoder, Make sure you're using a graphics card that supports **Nvcodec**. Also confirm that the latest graphics driver version is installed. See also: `com.unity.webrtc` documentation.
 
 ### Web server fails to run 
@@ -25,23 +25,23 @@ Make sure the port isn't being used by another service.
 ### Unity UI can't be operated through a browser.
 
 It is only possible to operate when the focus is on the running application.
-On [This page](browser_input.md#using-unity-ui), you can see more info.
+On [This page](browser-input.md#using-unity-ui), you can see more info.
 
 ## Issues with the environment
 
 ### Which versions of Unity can be used?
 
-It is available on **Unity 2019.4**.
+It is available on **Unity 2019.4**, **Unity 2020.3**. The latest Unity version **Unity 2021** might not worked accidentally.
 
 ### Which OS can be used?
 
-**Windows10 x64**, **Linux x64**, **macOS** and **iOS**. 
+**Windows10 x64**, **Linux x64**, **macOS** and **iOS** **Android**. 
 
-**Android** will be provided later. Support for **UWP**(Universal Windows Platform) and **WebGL** is not supported, 
+**UWP** and **WebGL** are not supported.
 
 ### Are there any hardware constraints?
 
-On Windows and Linux, the hardware codec uses an NVIDIA graphics card. See the NVIDIA [site](https://developer.nvidia.com/video-encode-decode-gpu-support-matrix) for information on graphics cards that support NVCodec.
+On Windows and Linux, the hardware codec uses an NVIDIA graphics card. See the [NVIDIA site](https://developer.nvidia.com/video-encode-decode-gpu-support-matrix) for information on graphics cards that support NVCodec.
 
 ### Which browsers are supported?
 
@@ -63,7 +63,7 @@ Yes. If you use the hardware encoder, make sure to check the limitation of the n
 
 ### How do you increase the video quality?
 
-You can set the resolution of the frame on the `CameraStreamer` inspector. Keep in mind that video quality depends on the quality of the network. 
+You can set the resolution of the frame on the inspector window of [video stream components](video-streaming.md). Keep in mind that video quality depends on the quality of the network.
 
 ## Questions about support
 

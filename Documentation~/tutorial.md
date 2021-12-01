@@ -5,11 +5,11 @@ In this page, we introduce the way to use samples published on Package Manager.
 ## Install package
 
 > [!NOTE]
-> In Unity `2020.2` and `2019.4`, there are differences about how to install Unity Render Streaming package so please pay attention to the Unity version you are using and follow the instructions below.
+> In Unity **2020.3** and **2019.4**, there are differences about how to install Unity Render Streaming package so please pay attention to the Unity version you are using and follow the instructions below.
 
 ### Case of Unity 2019.4
 
-Select `Window/Package Manager` in the menu bar.
+Select **Window > Package Manager** in the menu bar.
 
 ![Install Package Manager from menu bar](images/install_select_packman_menu_unity2019.png)
 
@@ -27,9 +27,9 @@ If an input system dialog box appears, click `Yes`
 
 ![Input system backend](images/input_system_backend.png)
 
-### Case of Unity 2020.2
+### Case of Unity 2020.3
 
-Select `Window/Package Manager` in the menu bar.
+Select **Window > Package Manager** in the menu bar.
 
 ![Install Package Manager from menu bar](images/install_select_packman_menu_unity2020.png)
 
@@ -40,7 +40,7 @@ Check Package Manager window, Click `+` button and select `Add package from git 
 Input the string below to the input field.
 
 ```
-com.unity.renderstreaming@3.1.0-exp.1
+com.unity.renderstreaming@3.1.0-exp.2
 ```
 
 The list of version string is [here](https://github.com/Unity-Technologies/com.unity.renderstreaming/tags). In most cases, the latest version is recommended to use.
@@ -53,7 +53,7 @@ If an input system dialog box appears, click `Yes`
 
 ## Install web application
 
-Click on `Edit/Render Streaming/Download web app` menu item to download the application from [this page](https://github.com/Unity-Technologies/UnityRenderStreaming/releases).
+Click on **Edit > Render Streaming > Download web app** menu item to download the application from [this page](https://github.com/Unity-Technologies/UnityRenderStreaming/releases).
 
 ![Download webapp](images/download_webapp.png)
 
@@ -107,23 +107,10 @@ You can see the Unity scene on the browser, and control a camera in the Unity sc
 
 ## Deploy to Furioos
 
-As you may already know, **Unity Render Streaming** has a Furioos-compatible signaling option. This means that you can build a dedicated version of your application, host it on **Furioos**, and share it with thousands of customers who will enjoy all the features of **Unity Render Streaming**. But you will **not** have to deal with any of the difficulties of setting up a private server, a machine in the cloud or manage the scalability of your solution.
+**Unity Render Streaming** is also supported natively by [**Furioos**](https://www.furioos.com) platform.
+That means that you can easily build a Unity application, upload it on **Furioos** and enjoy all the features of Unity Render Streaming without worrying about the deployment and scalability issues of your project.
 
-To do so, the requirement is to select "FurioosSignaling" in the "Signaling server type" parameter of the [RenderStreaming](components.md#render-streaming) component.
-This allow your application to connect to Furioos services when running on the managed virtual machines.
-
-![Selecting FurioosSignaling](images/furioos_signaling.png)
-
-Then just build a **standalone Windows version** of your application, and zip it! Don't try to build iOS, Android, linux or whatever version of your app, **Furioos only support Windows applications**. Also, be sure to zip the whole exported folder with all files and sub-folders, not just the ".exe" file.
-
-![Selecting FurioosSignaling](images/furioos_zip_folder.png)
-
-Finally just upload it on your account at https://portal.furioos.com/ .
-If you need futher help to upload your application on **Furioos**, please follow [this tutorial](https://support.furioos.com/article/adding-an-application-on-furioos/).
-
-You can check the stream type on https://portal.furioos.com/ by clicking to the "more options" button in the toolbar.
-
-![Selecting FurioosSignaling](images/furioos_stream_type.png)
+Please see [this page](deploy-to-furioos.md) to learn how to deploy your application on Furioos service.
 
 ## After tutorial
 

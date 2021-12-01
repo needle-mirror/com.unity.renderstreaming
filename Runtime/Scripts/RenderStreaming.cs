@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
@@ -10,28 +11,28 @@ namespace Unity.RenderStreaming
     public sealed class RenderStreaming : MonoBehaviour
     {
 #pragma warning disable 0649
-        [SerializeField, Tooltip("Signaling server url")]
+        [SerializeField, Tooltip("Signaling server url.")]
         private string urlSignaling = "http://localhost";
 
-        [SerializeField, Tooltip("Type of signaling")]
+        [SerializeField, Tooltip("Type of signaling.")]
         private string signalingType = typeof(HttpSignaling).FullName;
 
-        [SerializeField, Tooltip("Array to set your own STUN/TURN servers")]
+        [SerializeField, Tooltip("Array to set your own STUN/TURN servers.")]
         private RTCIceServer[] iceServers = new RTCIceServer[]
         {
             new RTCIceServer() {urls = new string[] {"stun:stun.l.google.com:19302"}}
         };
 
-        [SerializeField, Tooltip("Time interval for polling from signaling server")]
+        [SerializeField, Tooltip("Time interval for polling from signaling server.")]
         private float interval = 5.0f;
 
-        [SerializeField, Tooltip("Enable or disable hardware encoder")]
+        [SerializeField, Tooltip("Enable or disable hardware encoder.")]
         private bool hardwareEncoderSupport = true;
 
-        [SerializeField]
+        [SerializeField, Tooltip("List of handlers of signaling process.")]
         private List<SignalingHandlerBase> handlers = new List<SignalingHandlerBase>();
 
-        [SerializeField]
+        [SerializeField, Tooltip("Automatically started when called Awake method.")]
         public bool runOnAwake = true;
 #pragma warning restore 0649
 
@@ -59,7 +60,21 @@ namespace Unity.RenderStreaming
             RTCConfiguration conf = new RTCConfiguration {iceServers = iceServers};
             ISignaling signaling = CreateSignaling(
                 signalingType, urlSignaling, interval, SynchronizationContext.Current);
-            Run(conf, hardwareEncoderSupport, signaling, handlers.ToArray());
+            _Run(conf, hardwareEncoderSupport, signaling, handlers.ToArray());
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="hardwareEncoder"></param>
+        /// <param name="signaling"></param>
+        /// <param name="handlers"></param>
+        public void Run(
+            bool? hardwareEncoder = null,
+            ISignaling signaling = null,
+            SignalingHandlerBase[] handlers = null)
+        {
+            _Run(null, hardwareEncoder, signaling, handlers);
         }
 
         /// <summary>
@@ -69,7 +84,18 @@ namespace Unity.RenderStreaming
         /// <param name="hardwareEncoder"></param>
         /// <param name="signaling"></param>
         /// <param name="handlers"></param>
+        /// <remarks> To use this method, Need to depend WebRTC package </remarks>
         public void Run(
+            RTCConfiguration conf,
+            bool? hardwareEncoder = null,
+            ISignaling signaling = null,
+            SignalingHandlerBase[] handlers = null
+            )
+        {
+            _Run(conf, hardwareEncoder, signaling, handlers);
+        }
+
+        private void _Run(
             RTCConfiguration? conf = null,
             bool? hardwareEncoder = null,
             ISignaling signaling = null,
@@ -100,15 +126,17 @@ namespace Unity.RenderStreaming
                 startCoroutine = StartCoroutine,
                 resentOfferInterval = interval,
             };
+            var _handlers = (handlers ?? this.handlers.AsEnumerable()).Where(_ => _ != null);
+            if (_handlers.Count() == 0)
+                throw new InvalidOperationException("Handler list is empty.");
+
             m_instance = new RenderStreamingInternal(ref dependencies);
             m_provider = new SignalingEventProvider(m_instance);
 
-            SignalingHandlerBase[] _handlers = handlers ?? this.handlers.ToArray();
-
-            foreach (var source in _handlers)
+            foreach (var handler in _handlers)
             {
-                source.SetHandler(m_instance);
-                m_provider.Subscribe(source);
+                handler.SetHandler(m_instance);
+                m_provider.Subscribe(handler);
             }
             m_running = true;
         }

@@ -5,7 +5,8 @@ using UnityEngine;
 namespace Unity.RenderStreaming
 {
     public class Broadcast : SignalingHandlerBase,
-        IOfferHandler, IAddChannelHandler, IDisconnectHandler, IDeletedConnectionHandler
+        IOfferHandler, IAddChannelHandler, IDisconnectHandler, IDeletedConnectionHandler,
+        IAddReceiverHandler
     {
         [SerializeField]
         private List<Component> streams = new List<Component>();
@@ -38,18 +39,25 @@ namespace Unity.RenderStreaming
                 return;
             connectionIds.Remove(connectionId);
 
-            foreach (var source in streams.OfType<IStreamSource>())
+            foreach (var sender in streams.OfType<IStreamSender>())
             {
-                source.SetSender(connectionId, null);
+                RemoveSender(connectionId, sender);
             }
             foreach (var receiver in streams.OfType<IStreamReceiver>())
             {
-                receiver.SetReceiver(connectionId, null);
+                RemoveReceiver(connectionId, receiver);
             }
             foreach (var channel in streams.OfType<IDataChannel>())
             {
-                channel.SetChannel(connectionId, null);
+                RemoveChannel(connectionId, channel);
             }
+        }
+
+        public void OnAddReceiver(SignalingEventData data)
+        {
+            var receiver = streams.OfType<IStreamReceiver>().
+                FirstOrDefault(r => r.Track == null);
+            receiver?.SetReceiver(data.connectionId, data.receiver);
         }
 
         public void OnOffer(SignalingEventData data)
@@ -61,15 +69,13 @@ namespace Unity.RenderStreaming
             }
             connectionIds.Add(data.connectionId);
 
-            foreach (var source in streams.OfType<IStreamSource>())
+            foreach (var source in streams.OfType<IStreamSender>())
             {
-                var transceiver = AddTrack(data.connectionId, source.Track);
-                source.SetSender(data.connectionId, transceiver.Sender);
+                AddSender(data.connectionId, source);
             }
             foreach (var channel in streams.OfType<IDataChannel>().Where(c => c.IsLocal))
             {
-                var _channel = CreateChannel(data.connectionId, channel.Label);
-                channel.SetChannel(data.connectionId, _channel);
+                AddChannel(data.connectionId, channel);
             }
             SendAnswer(data.connectionId);
         }
@@ -77,7 +83,7 @@ namespace Unity.RenderStreaming
         public void OnAddChannel(SignalingEventData data)
         {
             var channel = streams.OfType<IDataChannel>().
-                FirstOrDefault(r => r.Channel == null && !r.IsLocal);
+                FirstOrDefault(r => !r.IsConnected && !r.IsLocal);
             channel?.SetChannel(data.connectionId, data.channel);
         }
     }

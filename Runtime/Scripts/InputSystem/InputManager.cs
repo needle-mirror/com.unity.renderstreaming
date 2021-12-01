@@ -1,5 +1,3 @@
-// todo(kazuki):: This script should be moved into the WebRTC package.
-// #if UNITY_WEBRTC_ENABLE_INPUT_SYSTEM
 using System;
 using System.Collections.Generic;
 using UnityEngine.InputSystem;
@@ -7,9 +5,10 @@ using UnityEngine.InputSystem.Layouts;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.InputSystem.Utilities;
 
-// namespace Unity.WebRTC.InputSystem
-namespace Unity.RenderStreaming
+namespace Unity.RenderStreaming.InputSystem
 {
+    using InputSystem = UnityEngine.InputSystem.InputSystem;
+
     /// <summary>
     ///
     /// </summary>
@@ -78,7 +77,7 @@ namespace Unity.RenderStreaming
         /// <param name="json"></param>
         /// <param name="name"></param>
         /// <param name="matches"></param>
-        void RegisterLayout(string json, string name = null, InputDeviceMatcher? matches = null);
+        void RegisterControlLayout(string json, string name = null, bool isOverride = false);
         /// <summary>
         ///
         /// </summary>
@@ -142,9 +141,12 @@ namespace Unity.RenderStreaming
             return InputSystem.LoadLayout(name);
         }
 
-        public virtual void RegisterLayout(string json, string name = null, InputDeviceMatcher? matches = null)
+        public virtual void RegisterControlLayout(string json, string name = null, bool isOverride = false)
         {
-            InputSystem.RegisterLayout(json, name, matches);
+            if(isOverride)
+                InputSystem.RegisterLayoutOverride(json, name);
+            else
+                InputSystem.RegisterLayout(json, name);
         }
 
         public virtual void RemoveLayout(string name)

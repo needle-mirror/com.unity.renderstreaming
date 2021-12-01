@@ -1,7 +1,5 @@
 // note:: This script is using code snippets in InputSystem.
 // https://github.com/Unity-Technologies/InputSystem/blob/develop/Packages/com.unity.inputsystem/InputSystem/Devices/Remote/InputRemoting.cs
-// todo(kazuki):: This script should be moved into the WebRTC package.
-// #if UNITY_WEBRTC_ENABLE_INPUT_SYSTEM
 using System;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -29,8 +27,7 @@ using UnityEngine.InputSystem;
 ////REVIEW: the namespacing mechanism for layouts which changes base layouts means that layouts can't be played
 ////        around with on the editor side but will only be changed once they're updated in the player
 
-// namespace Unity.WebRTC.InputSystem
-namespace Unity.RenderStreaming
+namespace Unity.RenderStreaming.InputSystem
 {
     /// <summary>
     /// Makes the activity and data of an InputManager observable in message form.
@@ -97,6 +94,30 @@ namespace Unity.RenderStreaming
             }
         }
 
+        static InputRemoting()
+        {
+#if UNITY_EDITOR
+            // 
+            // note: This lines are for avoiding issues when running the editor
+            // on background. When moved the focus from the editor, input events
+            // from another process are ignored.
+            // Please attention behaviours are difference several platforms when
+            // moving focus from Unity Editor.
+            //
+            // Additionally, The behaviour is changed Unity2021.2 later (using
+            // InputSystem 1.1). Please see "Background behaviour".
+            // https://docs.unity3d.com/Packages/com.unity.inputsystem@1.1/manual/Settings.html#background-behavior
+#if INPUTSYSTEM_1_1_OR_NEWER
+            // todo(kazuki):
+#else
+            // Make sure we're not affected by the user giving focus away from the
+            // game view.
+            //
+            InputEditorUserSettings.lockInputToGameView = true;
+#endif
+#endif
+        }
+
         internal InputRemoting(IInputManager manager, bool startSendingOnConnect = false)
         {
             if (manager == null)
@@ -129,8 +150,7 @@ namespace Unity.RenderStreaming
 
             sending = true;
 
-            SendAllLayouts();
-            SendAllDevices();
+            SendInitialMessages();
         }
 
         public void StopSending()
@@ -202,6 +222,34 @@ namespace Unity.RenderStreaming
             return subscriber;
         }
 
+        private void SendInitialMessages()
+        {
+            SendAllGeneratedLayouts();
+            SendAllDevices();
+        }
+
+        private void SendAllGeneratedLayouts()
+        {
+            // todo(kazuki)::
+            // layputBuilders property is not published from InputSystem
+            // 
+            //foreach (var entry in m_LocalManager.m_Layouts.layoutBuilders)
+            //    SendLayout(entry.Key);
+
+            foreach (var layout in m_LocalManager.layouts)
+                SendLayout(layout);
+        }
+
+        private void SendLayout(string layoutName)
+        {
+            if (m_Subscribers == null)
+                return;
+
+            var message = NewLayoutMsg.Create(this, layoutName);
+            if (message != null)
+                Send(message.Value);
+        }
+
         private void SendAllDevices()
         {
             var devices = m_LocalManager.devices;
@@ -211,15 +259,20 @@ namespace Unity.RenderStreaming
 
         private void SendDevice(InputDevice device)
         {
-            var message = NewDeviceMsg.Create(device);
-            Send(message);
-        }
+            if (m_Subscribers == null)
+                return;
 
-        private void SendAllLayouts()
-        {
-            var layouts = m_LocalManager.layouts.ToArray();
-            foreach(var layout in layouts)
-                SendLayoutChange(layout, InputControlLayoutChange.Added);
+            // Don't mirror remote devices to other remotes.
+            if (device.remote)
+                return;
+
+            var newDeviceMessage = NewDeviceMsg.Create(device);
+            Send(newDeviceMessage);
+
+            // Send current state. We do this here in this case as the device
+            // may have been added some time ago and thus have already received events.
+            var stateEventMessage = NewEventsMsg.CreateStateEvent(device);
+            Send(stateEventMessage);
         }
 
         private unsafe void SendEvent(InputEventPtr eventPtr, InputDevice device)
@@ -435,8 +488,6 @@ namespace Unity.RenderStreaming
         {
             public static void Process(InputRemoting Receiver, Message msg)
             {
-                Debug.Log("DisconnectMsg.Process");
-
                 Receiver.RemoveRemoteDevices(msg.participantId);
                 Receiver.StopSending();
             }
@@ -445,6 +496,14 @@ namespace Unity.RenderStreaming
         // Tell remote input system that there's a new layout.
         private static class NewLayoutMsg
         {
+            [Serializable]
+            public struct Data
+            {
+                public string name;
+                public string layoutJson;
+                public bool isOverride;
+            }
+
             public static Message? Create(InputRemoting sender, string layoutName)
             {
                 // Try to load the layout. Ignore the layout if it couldn't
@@ -469,23 +528,28 @@ namespace Unity.RenderStreaming
                     return null;
                 }
 
-                var json = layout.ToJson();
-                var bytes = Encoding.UTF8.GetBytes(json);
+                var data = new Data
+                {
+                    name = layoutName,
+                    layoutJson = layout.ToJson(),
+                    isOverride = layout.isOverride
+                };
 
                 return new Message
                 {
                     type = MessageType.NewLayout,
-                    data = bytes
+                    data = SerializeData(data)
                 };
             }
 
             public static void Process(InputRemoting Receiver, Message msg)
             {
-                var json = Encoding.UTF8.GetString(msg.data);
+                var data = DeserializeData<Data>(msg.data);
                 var senderIndex = Receiver.FindOrCreateSenderRecord(msg.participantId);
 
-                Receiver.m_LocalManager.RegisterLayout(json);
-                ArrayHelpers.Append(ref Receiver.m_Senders[senderIndex].layouts, json);
+                var internedLayoutName = new InternedString(data.name);
+                Receiver.m_LocalManager.RegisterControlLayout(data.layoutJson, data.name, data.isOverride);
+                ArrayHelpers.Append(ref Receiver.m_Senders[senderIndex].layouts, internedLayoutName);
             }
         }
 
@@ -604,6 +668,19 @@ namespace Unity.RenderStreaming
         // Tell remote system there's new input events.
         private static class NewEventsMsg
         {
+            // todo(kazuki):: not found DeviceResetEvent
+            //public static unsafe Message CreateResetEvent(InputDevice device, bool isHardReset)
+            //{
+            //    var resetEvent = DeviceResetEvent.Create(device.deviceId, isHardReset);
+            //    return Create((InputEvent*)UnsafeUtility.AddressOf(ref resetEvent), 1);
+            //}
+
+            public static unsafe Message CreateStateEvent(InputDevice device)
+            {
+                using (StateEvent.From(device, out var eventPtr))
+                    return Create(eventPtr.data, 1);
+            }
+
             public static unsafe Message Create(InputEvent* events, int eventCount)
             {
                 // Find total size of event buffer we need.
