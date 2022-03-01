@@ -4,15 +4,24 @@ using UnityEngine;
 
 namespace Unity.RenderStreaming
 {
+    [RequireComponent(typeof(AudioSource))]
     public class MicrophoneStreamSender : AudioStreamSender
     {
         [SerializeField, Tooltip("Device index of microphone")]
         private int deviceIndex = 0;
 
+        [SerializeField, Tooltip("Mute own microphone input")]
+        private bool mute = true;
+
         public IEnumerable<string> MicrophoneNameList => Microphone.devices;
+
+        protected AudioSource audioSource;
 
         protected override void Awake()
         {
+            base.Awake();
+
+            audioSource = GetComponent<AudioSource>();
         }
 
         protected override void OnEnable()
@@ -37,6 +46,17 @@ namespace Unity.RenderStreaming
             audioSource.Play();
         }
 
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+
+            if (audioSource == null)
+                return;
+
+            audioSource.Stop();
+            audioSource.clip = null;
+        }
+
         public void SetDeviceIndex(int index)
         {
             deviceIndex = index;
@@ -44,11 +64,23 @@ namespace Unity.RenderStreaming
 
         protected override MediaStreamTrack CreateTrack()
         {
-            track = new AudioStreamTrack(audioSource);
+            track = new AudioStreamTrack();
             return track;
         }
 
         protected override void OnAudioFilterRead(float[] data, int channels)
-        {}
+        {
+            base.OnAudioFilterRead(data, channels);
+
+            if (!mute)
+            {
+                return;
+            }
+
+            for (int i = 0; i < data.Length; i++)
+            {
+                data[i] = 0;
+            }
+        }
     }
 }

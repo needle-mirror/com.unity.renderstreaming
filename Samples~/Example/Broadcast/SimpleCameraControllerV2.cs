@@ -1,10 +1,10 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using Unity.RenderStreaming.InputSystem;
+using UnityEngine.InputSystem.EnhancedTouch;
 
 namespace Unity.RenderStreaming.Samples
 {
-    public class SimpleCameraControllerV2 : MonoBehaviour
+    class SimpleCameraControllerV2 : MonoBehaviour
     {
         class CameraState
         {
@@ -91,6 +91,9 @@ namespace Unity.RenderStreaming.Samples
         {
             playerInput.onDeviceChange += OnDeviceChange;
             m_InitialCameraState.SetFromTransform(transform);
+
+            // Need to set enable the flag to receive touch screen event from mobile devices.
+            EnhancedTouchSupport.Enable();
         }
 
         void OnDeviceChange(InputDevice device, InputDeviceChange change)

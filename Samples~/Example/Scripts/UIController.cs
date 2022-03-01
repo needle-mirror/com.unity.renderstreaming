@@ -3,10 +3,10 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 
-namespace Unity.RenderStreaming
+namespace Unity.RenderStreaming.Samples
 {
     [RequireComponent(typeof(RectTransform))]
-    public class UIController : MonoBehaviour
+    class UIController : MonoBehaviour
     {
         [SerializeField] Text text;
         [SerializeField] CanvasGroup canvasGroup;
