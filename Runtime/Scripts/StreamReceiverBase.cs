@@ -1,3 +1,4 @@
+using System;
 using Unity.WebRTC;
 using UnityEngine;
 
@@ -9,47 +10,68 @@ namespace Unity.RenderStreaming
     public abstract class StreamReceiverBase : MonoBehaviour, IStreamReceiver
     {
         /// <summary>
-        /// 
+        ///
         /// </summary>
-        public RTCRtpReceiver Receiver => m_receiver;
+        public RTCRtpTransceiver Transceiver => m_transceiver;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public OnStartedStreamHandler OnStartedStream { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public OnStoppedStreamHandler OnStoppedStream { get; set; }
 
-
-        private RTCRtpReceiver m_receiver;
-
-
         /// <summary>
         ///
         /// </summary>
-        public MediaStreamTrack Track { get; private set; }
+        public MediaStreamTrack Track => m_track;
 
         /// <summary>
-        ///
+        /// 
         /// </summary>
-        public virtual TrackKind Kind { get; }
-
-
-        /// <summary>
-        ///
-        /// </summary>
-        /// <param name="track"></param>
-        public virtual void SetReceiver(string connectionId, RTCRtpReceiver receiver)
+        public bool isPlaying
         {
-            m_receiver = receiver;
-            Track = m_receiver?.Track;
-            if (m_receiver == null)
+            get
+            {
+                if (!Application.isPlaying)
+                    return false;
+                if (string.IsNullOrEmpty(Transceiver.Mid))
+                    return false;
+                if (Transceiver.Sender.Track.ReadyState == TrackState.Ended)
+                    return false;
+                return true;
+            }
+        }
+
+        private RTCRtpTransceiver m_transceiver;
+        private MediaStreamTrack m_track;
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="connectionId"></param>
+        /// <param name="receiver"></param>
+        public virtual void SetTransceiver(string connectionId, RTCRtpTransceiver transceiver)
+        {
+            if (connectionId == null)
+                throw new ArgumentNullException("connectionId", "connectionId is null");
+
+            m_transceiver = transceiver;
+            m_track = m_transceiver?.Receiver.Track;
+
+            if (m_transceiver == null)
                 OnStoppedStream?.Invoke(connectionId);
             else
                 OnStartedStream?.Invoke(connectionId);
+        }
+
+        protected virtual void OnDestroy()
+        {
+            m_track?.Dispose();
+            m_track = null;
         }
     }
 }

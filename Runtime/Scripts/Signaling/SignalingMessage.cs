@@ -4,7 +4,25 @@ namespace Unity.RenderStreaming
 {
 #pragma warning disable 0649
     [Serializable]
-    public class SignalingMessage
+    public class DescData
+    {
+        public string connectionId;
+        public string sdp;
+        public string type;
+        public bool polite;
+    }
+
+    [Serializable]
+    public class CandidateData
+    {
+        public string connectionId;
+        public string candidate;
+        public string sdpMid;
+        public int sdpMLineIndex;
+    }
+
+    [Serializable]
+    class SignalingMessage
     {
         public string status;
         public string message;
@@ -19,21 +37,12 @@ namespace Unity.RenderStreaming
     }
 
     [Serializable]
-    public class RoutedMessage<T>
+    class RoutedMessage<T>
     {
         public string from;
         public string to;
         public string type;
         public T data;
-    }
-
-    [Serializable]
-    public class DescData
-    {
-        public string connectionId;
-        public string sdp;
-        public string type;
-        public bool polite;
     }
 
     [Serializable]
@@ -88,12 +97,9 @@ namespace Unity.RenderStreaming
     }
 
     [Serializable]
-    public class CandidateData
+    class AllResData
     {
-        public string connectionId;
-        public string candidate;
-        public string sdpMid;
-        public int sdpMLineIndex;
+        public SignalingMessage[] messages;
     }
 
 #pragma warning restore 0649

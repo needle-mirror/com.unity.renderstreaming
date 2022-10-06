@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Threading;
 using System.Diagnostics;
-using System.Linq;
 using NUnit.Framework;
 using Unity.RenderStreaming.RuntimeTest.Signaling;
 using Unity.RenderStreaming.Signaling;
@@ -137,8 +136,6 @@ namespace Unity.RenderStreaming.RuntimeTest
         [UnitySetUp, Timeout(1000)]
         public IEnumerator UnitySetUp()
         {
-            WebRTC.WebRTC.Initialize();
-
             RTCConfiguration config = default;
             RTCIceCandidate candidate_ = null;
             config.iceServers = new[] {new RTCIceServer {urls = new[] {"stun:stun.l.google.com:19302"}}};
@@ -181,8 +178,6 @@ namespace Unity.RenderStreaming.RuntimeTest
         [TearDown]
         public void TearDown()
         {
-            WebRTC.WebRTC.Dispose();
-
             signaling1.Stop();
             signaling2.Stop();
             m_Context = null;

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.WebRTC;
 
 namespace Unity.RenderStreaming
@@ -43,7 +44,7 @@ namespace Unity.RenderStreaming
         /// <summary>
         ///
         /// </summary>
-        event Action<string, RTCRtpReceiver> onAddReceiver;
+        event Action<string, RTCRtpTransceiver> onAddTransceiver;
 
         /// <summary>
         ///
@@ -107,29 +108,22 @@ namespace Unity.RenderStreaming
         void SendAnswer(string connectionId);
 
         /// <summary>
-        ///
+        /// 
         /// </summary>
         /// <param name="connectionId"></param>
         /// <param name="track"></param>
-        RTCRtpTransceiver AddSenderTrack(string connectionId, MediaStreamTrack track);
-
-        /// <summary>
-        ///
-        /// </summary>
-        /// <param name="connectionId"></param>
-        /// <param name="track"></param>
-        /// <param name="direction"></param>
+        /// <param name="init"></param>
         /// <returns></returns>
-        RTCRtpTransceiver AddTransceiver(string connectionId, MediaStreamTrack track, RTCRtpTransceiverDirection direction);
+        RTCRtpTransceiver AddTransceiver(string connectionId, MediaStreamTrack track, RTCRtpTransceiverInit init = null);
 
         /// <summary>
-        ///
+        /// 
         /// </summary>
         /// <param name="connectionId"></param>
         /// <param name="kind"></param>
-        /// <param name="direction"></param>
+        /// <param name="init"></param>
         /// <returns></returns>
-        RTCRtpTransceiver AddTransceiver(string connectionId, TrackKind kind, RTCRtpTransceiverDirection direction);
+        RTCRtpTransceiver AddTransceiver(string connectionId, TrackKind kind, RTCRtpTransceiverInit init = null);
 
         /// <summary>
         ///
@@ -137,5 +131,12 @@ namespace Unity.RenderStreaming
         /// <param name="connectionId"></param>
         /// <param name="track"></param>
         void RemoveSenderTrack(string connectionId, MediaStreamTrack track);
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="connectionId"></param>
+        /// <returns></returns>
+        IEnumerable<RTCRtpTransceiver> GetTransceivers(string connectionId);
     }
 }

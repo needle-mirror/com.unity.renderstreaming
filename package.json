@@ -1,12 +1,12 @@
 {
   "name": "com.unity.renderstreaming",
   "displayName": "Unity Render Streaming",
-  "version": "3.1.0-exp.3",
-  "unity": "2019.4",
+  "version": "3.1.0-exp.4",
+  "unity": "2020.3",
   "description": "This is a package for using Unity Render Streaming technology. It contains two samples to use the technology.",
   "dependencies": {
-    "com.unity.webrtc": "2.4.0-exp.6",
-    "com.unity.inputsystem": "1.3.0"
+    "com.unity.webrtc": "2.4.0-exp.11",
+    "com.unity.inputsystem": "1.4.1"
   },
   "samples": [
     {
@@ -15,15 +15,12 @@
       "path": "Samples~/Example"
     }
   ],
-  "upm": {
-    "changelog": "### Changed,- Upgraded the version of Input System package `1.3.0`.,- Upgraded the version of WebRTC package `2.4.0-exp.6`.,- Added microphone device option for streaming audio in the \"Bidirectional\" sample.,- Integrate AR Foundation Sample (only use AR Foundation version 4.1.9, deprecated version 2.1),### Fixed,- Fixed the worker thread is not closed when stopping the signaling client.,- Fixed keyboard input sending only sends one key at a time from browser.,- Fixed video flipped vertically when uging GLES/GLCore graphics API.,- Fixed the crach when encoding the high resolution on macOS using HWA.,- Fixed the gap of the input position between sender and receiver.,- Fixed the unexpected behaviour of input after using Gyro sample."
-  },
   "upmCi": {
-    "footprint": "3862577332fc84119a7a9da2315937851ade8079"
+    "footprint": "dc16600be9edb02cd8e1e0da837f4b90f4372835"
   },
   "repository": {
     "url": "https://github.com/Unity-Technologies/UnityRenderStreaming.git",
     "type": "git",
-    "revision": "278e525170da39f07132f36d88a3149b1652dd32"
+    "revision": "1165e0f743d5c0cfdfbae4106d9b4bf2ac70b7b6"
   }
 }

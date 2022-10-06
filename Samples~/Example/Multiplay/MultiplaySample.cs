@@ -18,6 +18,7 @@ namespace Unity.RenderStreaming.Samples
         [SerializeField] GameObject menuCamera;
         [SerializeField] GameObject panel;
         [SerializeField] RawImage videoImage;
+        [SerializeField] ShowStatsUI statsUI;
 
         enum Role
         {
@@ -25,7 +26,14 @@ namespace Unity.RenderStreaming.Samples
             Guest = 1
         }
 
-        // Start is called before the first frame update
+        private RenderStreamingSettings settings;
+
+
+        private void Awake()
+        {
+            settings = SampleManager.Instance.Settings;
+        }
+
         void Start()
         {
             buttonStart.onClick.AddListener(OnClickButtonStart);
@@ -42,14 +50,13 @@ namespace Unity.RenderStreaming.Samples
 
         void OnClickButtonStart()
         {
-            var toggles = toggleGroupRole.GetComponentsInChildren<Toggle>();
-            var activeToggles = toggleGroupRole.ActiveToggles();
-            var toggle = activeToggles.Any() ? activeToggles.First() : null;
-            var indexRole = Array.FindIndex(toggles, _ => _ == toggle);
-            Role role = (Role)indexRole;
-
             var username = inputFieldUsername.text;
             var connectionId = Guid.NewGuid().ToString();
+
+            var toggles = toggleGroupRole.GetComponentsInChildren<Toggle>();
+            var activeToggle = toggleGroupRole.ActiveToggles().First();
+            var indexRole = Array.FindIndex(toggles, _ => _ == activeToggle);
+            var role = (Role)indexRole;
 
             panel.SetActive(false);
 
@@ -79,11 +86,10 @@ namespace Unity.RenderStreaming.Samples
             playerInput.PerformPairingWithAllLocalDevices();
             playerController.CheckPairedDevices();
 
-            renderStreaming.Run(
-                hardwareEncoder: RenderStreamingSettings.EnableHWCodec,
-                signaling: RenderStreamingSettings.Signaling,
-                handlers: new SignalingHandlerBase[] { handler }
-                );
+            statsUI.AddSignalingHandler(handler);
+            renderStreaming.Run(signaling: settings?.Signaling,
+                handlers: new SignalingHandlerBase[] {handler}
+            );
         }
 
         IEnumerator SetUpGuest(string username, string connectionId)
@@ -91,11 +97,10 @@ namespace Unity.RenderStreaming.Samples
             var guestPlayer = GameObject.Instantiate(prefabGuest);
             var handler = guestPlayer.GetComponent<SingleConnection>();
 
-            renderStreaming.Run(
-                hardwareEncoder: RenderStreamingSettings.EnableHWCodec,
-                signaling: RenderStreamingSettings.Signaling,
-                handlers: new SignalingHandlerBase[] { handler }
-                );
+            statsUI.AddSignalingHandler(handler);
+            renderStreaming.Run(signaling: settings?.Signaling,
+                handlers: new SignalingHandlerBase[] {handler}
+            );
 
             videoImage.gameObject.SetActive(true);
             var receiveVideoViewer = guestPlayer.GetComponent<VideoStreamReceiver>();
@@ -103,6 +108,9 @@ namespace Unity.RenderStreaming.Samples
 
             var channel = guestPlayer.GetComponent<MultiplayChannel>();
             channel.OnStartedChannel += _ => { StartCoroutine(ChangeLabel(channel, username)); };
+
+            if(settings != null)
+                receiveVideoViewer.SetCodec(settings.ReceiverVideoCodec);
 
             // todo(kazuki):
             yield return new WaitForSeconds(1f);
@@ -118,4 +126,3 @@ namespace Unity.RenderStreaming.Samples
         }
     }
 }
-

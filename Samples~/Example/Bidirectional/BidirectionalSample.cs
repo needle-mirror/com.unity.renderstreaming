@@ -17,14 +17,15 @@ namespace Unity.RenderStreaming.Samples
         [SerializeField] private RawImage localVideoImage;
         [SerializeField] private RawImage remoteVideoImage;
         [SerializeField] private AudioSource receiveAudioSource;
-        [SerializeField] private WebCamStreamSender webCamStreamer;
+        [SerializeField] private VideoStreamSender webCamStreamer;
         [SerializeField] private VideoStreamReceiver receiveVideoViewer;
-        [SerializeField] private MicrophoneStreamSender microphoneStreamer;
+        [SerializeField] private AudioStreamSender microphoneStreamer;
         [SerializeField] private AudioStreamReceiver receiveAudioViewer;
         [SerializeField] private SingleConnection singleConnection;
 #pragma warning restore 0649
 
         private string connectionId;
+        private RenderStreamingSettings settings;
 
         void Awake()
         {
@@ -46,17 +47,24 @@ namespace Unity.RenderStreaming.Samples
             hangUpButton.onClick.AddListener(HangUp);
             connectionIdInput.onValueChanged.AddListener(input => connectionId = input);
             connectionIdInput.text = $"{Random.Range(0, 99999):D5}";
-            webcamSelectDropdown.onValueChanged.AddListener(index => webCamStreamer.SetDeviceIndex(index));
-            webcamSelectDropdown.options =
-                webCamStreamer.WebCamNameList.Select(x => new Dropdown.OptionData(x)).ToList();
+            webcamSelectDropdown.onValueChanged.AddListener(index => webCamStreamer.sourceDeviceIndex = index);
+            webcamSelectDropdown.options = WebCamTexture.devices.Select(x => x.name).Select(x => new Dropdown.OptionData(x)).ToList();
             webCamStreamer.OnStartedStream += id => receiveVideoViewer.enabled = true;
-            webCamStreamer.OnUpdateWebCamTexture += texture => localVideoImage.texture = texture;
+            webCamStreamer.OnStartedStream += _ => localVideoImage.texture = webCamStreamer.sourceWebCamTexture;
+
+            settings = SampleManager.Instance.Settings;
+            if (settings != null)
+            {
+                webCamStreamer.width = (uint)settings.StreamSize.x;
+                webCamStreamer.height = (uint)settings.StreamSize.y;
+            }
+
             receiveVideoViewer.OnUpdateReceiveTexture += texture => remoteVideoImage.texture = texture;
-            microphoneSelectDropdown.onValueChanged.AddListener(index => microphoneStreamer.SetDeviceIndex(index));
+
+            microphoneSelectDropdown.onValueChanged.AddListener(index => microphoneStreamer.sourceDeviceIndex = index);
             microphoneSelectDropdown.options =
-                microphoneStreamer.MicrophoneNameList.Select(x => new Dropdown.OptionData(x)).ToList();
-            microphoneStreamer.OnStartedStream += id => receiveAudioViewer.enabled = true;
-            receiveAudioViewer.SetSource(receiveAudioSource);
+                Microphone.devices.Select(x => new Dropdown.OptionData(x)).ToList();
+            receiveAudioViewer.targetAudioSource = receiveAudioSource;
             receiveAudioViewer.OnUpdateReceiveAudioSource += source =>
             {
                 source.loop = true;
@@ -68,9 +76,7 @@ namespace Unity.RenderStreaming.Samples
         {
             if (renderStreaming.runOnAwake)
                 return;
-            renderStreaming.Run(
-                hardwareEncoder: RenderStreamingSettings.EnableHWCodec,
-                signaling: RenderStreamingSettings.Signaling);
+            renderStreaming.Run(signaling: settings?.Signaling);
         }
 
         private void SetUp()
@@ -78,6 +84,11 @@ namespace Unity.RenderStreaming.Samples
             setUpButton.interactable = false;
             hangUpButton.interactable = true;
             connectionIdInput.interactable = false;
+            if(settings != null)
+            {
+                receiveVideoViewer.SetCodec(settings.ReceiverVideoCodec);
+                webCamStreamer.SetCodec(settings.SenderVideoCodec);
+            }
 
             singleConnection.CreateConnection(connectionId);
         }
@@ -91,6 +102,7 @@ namespace Unity.RenderStreaming.Samples
             hangUpButton.interactable = false;
             connectionIdInput.interactable = true;
             connectionIdInput.text = $"{Random.Range(0, 99999):D5}";
+            localVideoImage.texture = null;
         }
     }
 }

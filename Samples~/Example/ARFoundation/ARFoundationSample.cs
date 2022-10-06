@@ -29,6 +29,7 @@ namespace Unity.RenderStreaming.Samples
 #pragma warning restore 0649
 
         private string _connectionId;
+        private RenderStreamingSettings settings;
 
         void Awake()
         {
@@ -39,15 +40,15 @@ namespace Unity.RenderStreaming.Samples
             stopButton.gameObject.SetActive(false);
 
             receiveVideoViewer.OnUpdateReceiveTexture += texture => remoteVideoImage.texture = texture;
+
+            settings = SampleManager.Instance.Settings;
         }
 
         IEnumerator Start()
         {
             if (!renderStreaming.runOnAwake)
             {
-                renderStreaming.Run(
-                    hardwareEncoder: RenderStreamingSettings.EnableHWCodec,
-                    signaling: RenderStreamingSettings.Signaling);
+                renderStreaming.Run(signaling: settings?.Signaling);
             }
 
             if ((ARSession.state == ARSessionState.None ) ||
@@ -119,6 +120,9 @@ namespace Unity.RenderStreaming.Samples
 
         void CreateConnection()
         {
+            if(settings != null)
+                receiveVideoViewer.SetCodec(settings.ReceiverVideoCodec);
+
             _connectionId = System.Guid.NewGuid().ToString("N");
             connection.CreateConnection(_connectionId);
 

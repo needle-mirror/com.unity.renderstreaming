@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using Unity.RenderStreaming.Signaling;
 using UnityEngine;
@@ -21,81 +23,103 @@ namespace Unity.RenderStreaming.Samples
         Furioos
     }
 
-    internal static class RenderStreamingSettings
+    internal class RenderStreamingSettings
     {
-        private static bool s_enableHWCodec = false;
-        private static SignalingType s_signalingType = SignalingType.WebSocket;
-        private static string s_signalingAddress = "localhost";
-        private static float s_signalingInterval = 5;
-        private static bool s_signalingSecured = false;
+        public const int DefaultStreamWidth = 1280;
+        public const int DefaultStreamHeight = 720;
 
-        public static bool EnableHWCodec
+        private SignalingType signalingType = SignalingType.WebSocket;
+        private string signalingAddress = "localhost";
+        private float signalingInterval = 5;
+        private bool signalingSecured = false;
+        private Vector2Int streamSize = new Vector2Int(DefaultStreamWidth, DefaultStreamHeight);
+        private VideoCodecInfo receiverVideoCodec = null;
+        private VideoCodecInfo senderVideoCodec = null;
+
+        public SignalingType SignalingType
         {
-            get { return s_enableHWCodec; }
-            set { s_enableHWCodec = value; }
+            get { return signalingType; }
+            set { signalingType = value; }
         }
 
-        public static SignalingType SignalingType
+        public string SignalingAddress
         {
-            get { return s_signalingType; }
-            set { s_signalingType = value; }
+            get { return signalingAddress; }
+            set { signalingAddress = value; }
         }
 
-        public static string SignalingAddress
+        public bool SignalingSecured
         {
-            get { return s_signalingAddress; }
-            set { s_signalingAddress = value; }
+            get { return signalingSecured; }
+            set { signalingSecured = value; }
         }
 
-        public static bool SignalingSecured
+        public float SignalingInterval
         {
-            get { return s_signalingSecured; }
-            set { s_signalingSecured = value; }
+            get { return signalingInterval; }
+            set { signalingInterval = value; }
         }
 
-        public static float SignalingInterval
-        {
-            get { return s_signalingInterval; }
-            set { s_signalingInterval = value; }
-        }
-
-        public static ISignaling Signaling
+        public ISignaling Signaling
         {
             get
             {
-                switch (s_signalingType)
+                switch (signalingType)
                 {
                     case SignalingType.Furioos:
-                    {
-                        var schema = s_signalingSecured ? "https" : "http";
-                        return new FurioosSignaling(
-                            $"{schema}://{s_signalingAddress}", s_signalingInterval, SynchronizationContext.Current);
-                    }
+                        {
+                            var schema = signalingSecured ? "https" : "http";
+                            return new FurioosSignaling(
+                                $"{schema}://{signalingAddress}", signalingInterval, SynchronizationContext.Current);
+                        }
                     case SignalingType.WebSocket:
-                    {
-                        var schema = s_signalingSecured ? "wss" : "ws";
-                        return new WebSocketSignaling(
-                            $"{schema}://{s_signalingAddress}", s_signalingInterval, SynchronizationContext.Current);
-                    }
+                        {
+                            var schema = signalingSecured ? "wss" : "ws";
+                            return new WebSocketSignaling(
+                                $"{schema}://{signalingAddress}", signalingInterval, SynchronizationContext.Current);
+                        }
                     case SignalingType.Http:
-                    {
-                        var schema = s_signalingSecured ? "https" : "http";
-                        return new HttpSignaling(
-                            $"{schema}://{s_signalingAddress}", s_signalingInterval, SynchronizationContext.Current);
-                    }
+                        {
+                            var schema = signalingSecured ? "https" : "http";
+                            return new HttpSignaling(
+                                $"{schema}://{signalingAddress}", signalingInterval, SynchronizationContext.Current);
+                        }
                 }
+
                 throw new InvalidOperationException();
             }
+        }
+
+        public Vector2Int StreamSize
+        {
+            get { return streamSize; }
+            set { streamSize = value; }
+        }
+
+        public VideoCodecInfo ReceiverVideoCodec
+        {
+            get { return receiverVideoCodec; }
+            set { receiverVideoCodec = value; }
+        }
+
+        public VideoCodecInfo SenderVideoCodec
+        {
+            get { return senderVideoCodec; }
+            set { senderVideoCodec = value; }
         }
     }
 
     internal class SceneSelectUI : MonoBehaviour
     {
-        [SerializeField] private Toggle toggleEnableHWCodec;
         [SerializeField] private Dropdown dropdownSignalingType;
         [SerializeField] private InputField inputFieldSignalingAddress;
         [SerializeField] private Toggle toggleSignalingSecured;
         [SerializeField] private InputField inputFieldSignalingInterval;
+        [SerializeField] private Dropdown streamSizeSelector;
+        [SerializeField] private InputField textureWidthInput;
+        [SerializeField] private InputField textureHeightInput;
+        [SerializeField] private Dropdown receiverVideoCodecSelector;
+        [SerializeField] private Dropdown senderVideoCodecSelector;
 
         [SerializeField] private Button buttonBidirectional;
         [SerializeField] private Button buttonBroadcast;
@@ -106,20 +130,88 @@ namespace Unity.RenderStreaming.Samples
         [SerializeField] private Button buttonAR;
         [SerializeField] private Button buttonMultiplay;
 
+        [SerializeField]
+        private List<Vector2Int> streamSizeList = new List<Vector2Int>
+        {
+            new Vector2Int(640, 360),
+            new Vector2Int(1280, 720),
+            new Vector2Int(1920, 1080),
+            new Vector2Int(2560, 1440),
+            new Vector2Int(3840, 2160),
+            new Vector2Int(360, 640),
+            new Vector2Int(720, 1280),
+            new Vector2Int(1080, 1920),
+            new Vector2Int(1440, 2560),
+            new Vector2Int(2160, 3840),
+        };
+
+        private RenderStreamingSettings settings;
+
+        static string CodecTitle(VideoCodecInfo codec)
+        {
+            switch (codec)
+            {
+                case H264CodecInfo h264Codec:
+                    return $"{h264Codec.mimeType} {h264Codec.profile} {h264Codec.level.ToString().Insert(1, ".")} {h264Codec.codecImplementation}";
+                case VP9CodecInfo V9Codec:
+                    return $"{V9Codec.mimeType} {V9Codec.profile} {V9Codec.codecImplementation}";
+                default:
+                    return $"{codec.mimeType} {codec.codecImplementation}";
+            }
+            throw new ArgumentException();
+        }
+
         void Start()
         {
-            toggleEnableHWCodec.isOn = RenderStreamingSettings.EnableHWCodec;
-            dropdownSignalingType.value = (int)RenderStreamingSettings.SignalingType;
-            inputFieldSignalingAddress.text = RenderStreamingSettings.SignalingAddress;
-            toggleSignalingSecured.isOn = RenderStreamingSettings.SignalingSecured;
-            inputFieldSignalingInterval.text = RenderStreamingSettings.SignalingInterval.ToString(CultureInfo.InvariantCulture);
+            SampleManager.Instance.Initialize();
+            settings  = SampleManager.Instance.Settings;
 
-            toggleEnableHWCodec.onValueChanged.AddListener(OnChangeHWCodec);
+            dropdownSignalingType.value = (int)settings.SignalingType;
+            inputFieldSignalingAddress.text = settings.SignalingAddress;
+            toggleSignalingSecured.isOn = settings.SignalingSecured;
+            inputFieldSignalingInterval.text =
+                settings.SignalingInterval.ToString(CultureInfo.InvariantCulture);
+
             dropdownSignalingType.onValueChanged.AddListener(OnChangeSignalingType);
             inputFieldSignalingAddress.onValueChanged.AddListener(OnChangeSignalingAddress);
             toggleSignalingSecured.onValueChanged.AddListener(OnChangeSignalingSecured);
             inputFieldSignalingInterval.onValueChanged.AddListener(OnChangeSignalingInterval);
 
+            var optionList = streamSizeList.Select(size => new Dropdown.OptionData($" {size.x} x {size.y} ")).ToList();
+            optionList.Add(new Dropdown.OptionData(" Custom "));
+            streamSizeSelector.options = optionList;
+
+            var existInList = streamSizeList.Contains(settings.StreamSize);
+            if (existInList)
+            {
+                streamSizeSelector.value = streamSizeList.IndexOf(settings.StreamSize);
+            }
+            else
+            {
+                streamSizeSelector.value = optionList.Count - 1;
+                textureWidthInput.text = settings.StreamSize.x.ToString();
+                textureHeightInput.text = settings.StreamSize.y.ToString();
+                textureWidthInput.interactable = true;
+                textureHeightInput.interactable = true;
+            }
+
+            streamSizeSelector.onValueChanged.AddListener(OnChangeStreamSizeSelect);
+            textureWidthInput.onValueChanged.AddListener(OnChangeTextureWidthInput);
+            textureHeightInput.onValueChanged.AddListener(OnChangeTextureHeightInput);
+
+            var receiverVideoCodecList = VideoStreamReceiver.GetAvailableCodecs()
+                .Select(codec => new Dropdown.OptionData(CodecTitle(codec))).ToList();
+            receiverVideoCodecSelector.options.AddRange(receiverVideoCodecList);
+
+            var senderVideoCodecList = VideoStreamSender.GetAvailableCodecs()
+                .Select(codec => new Dropdown.OptionData(CodecTitle(codec))).ToList();
+            senderVideoCodecSelector.options.AddRange(senderVideoCodecList);
+
+            receiverVideoCodecSelector.value = Array.FindIndex(VideoStreamReceiver.GetAvailableCodecs().ToArray(), codec => codec.Equals(settings.ReceiverVideoCodec)) + 1;
+            senderVideoCodecSelector.value = Array.FindIndex(VideoStreamSender.GetAvailableCodecs().ToArray(), codec => codec.Equals(settings.SenderVideoCodec)) + 1;
+
+            receiverVideoCodecSelector.onValueChanged.AddListener(OnChangeReceiverVideoCodecSelect);
+            senderVideoCodecSelector.onValueChanged.AddListener(OnChangeSenderVideoCodecSelect);
             buttonBidirectional.onClick.AddListener(OnPressedBidirectional);
             buttonBroadcast.onClick.AddListener(OnPressedBroadcast);
             buttonGyro.onClick.AddListener(OnPressedGyro);
@@ -165,51 +257,111 @@ namespace Unity.RenderStreaming.Samples
         }
 #endif
 
-        private void OnChangeHWCodec(bool enable)
-        {
-            RenderStreamingSettings.EnableHWCodec = enable;
-        }
-
         private void OnChangeSignalingType(int value)
         {
-            RenderStreamingSettings.SignalingType =
+            settings.SignalingType =
                 (SignalingType)Enum.GetValues(typeof(SignalingType)).GetValue(value);
         }
 
         private void OnChangeSignalingAddress(string value)
         {
-            RenderStreamingSettings.SignalingAddress = value;
+            settings.SignalingAddress = value;
         }
 
         private void OnChangeSignalingSecured(bool value)
         {
-            RenderStreamingSettings.SignalingSecured = value;
+            settings.SignalingSecured = value;
         }
 
         private void OnChangeSignalingInterval(string value)
         {
             if (float.TryParse(value, out float _value))
             {
-                RenderStreamingSettings.SignalingInterval = _value;
+                settings.SignalingInterval = _value;
             }
             else
             {
-                RenderStreamingSettings.SignalingInterval = 5;
+                settings.SignalingInterval = 5;
             }
+        }
+
+        private void OnChangeStreamSizeSelect(int index)
+        {
+            var isCustom = index >= streamSizeList.Count;
+            textureWidthInput.interactable = isCustom;
+            textureHeightInput.interactable = isCustom;
+
+            if (isCustom)
+            {
+                return;
+            }
+
+            settings.StreamSize = streamSizeList[index];
+        }
+
+        private void OnChangeTextureWidthInput(string input)
+        {
+            var height = settings.StreamSize.y;
+
+            if (string.IsNullOrEmpty(input))
+            {
+                settings.StreamSize = new Vector2Int(RenderStreamingSettings.DefaultStreamWidth, height);
+                return;
+            }
+
+            if (int.TryParse(input, out var width))
+            {
+                settings.StreamSize = new Vector2Int(width, height);
+            }
+        }
+
+        private void OnChangeTextureHeightInput(string input)
+        {
+            var width = settings.StreamSize.x;
+
+            if (string.IsNullOrEmpty(input))
+            {
+                settings.StreamSize = new Vector2Int(width, RenderStreamingSettings.DefaultStreamHeight);
+                return;
+            }
+
+            if (int.TryParse(input, out var height))
+            {
+                settings.StreamSize = new Vector2Int(width, height);
+            }
+        }
+
+        private void OnChangeSenderVideoCodecSelect(int index)
+        {
+            if (index == 0)
+                settings.SenderVideoCodec = null;
+            else
+                settings.SenderVideoCodec = VideoStreamSender.GetAvailableCodecs().ElementAt(index - 1);
+        }
+
+        private void OnChangeReceiverVideoCodecSelect(int index)
+        {
+            if (index == 0)
+                settings.ReceiverVideoCodec = null;
+            else
+                settings.ReceiverVideoCodec = VideoStreamReceiver.GetAvailableCodecs().ElementAt(index - 1);
         }
 
         private void OnPressedBidirectional()
         {
             SceneManager.LoadScene("Bidirectional", LoadSceneMode.Single);
         }
+
         private void OnPressedBroadcast()
         {
             SceneManager.LoadScene("Broadcast", LoadSceneMode.Single);
         }
+
         private void OnPressedGyro()
         {
             SceneManager.LoadScene("Gyro", LoadSceneMode.Single);
         }
+
         private void OnPressedRenderPipeline()
         {
 #if URS_USE_URP_RUNTIME
@@ -220,14 +372,17 @@ namespace Unity.RenderStreaming.Samples
             throw new InvalidOperationException("HDRP or URP package is not found in this project.");
 #endif
         }
+
         private void OnPressedReceiver()
         {
             SceneManager.LoadScene("Receiver", LoadSceneMode.Single);
         }
+
         private void OnPressedWebBrowserInput()
         {
             SceneManager.LoadScene("WebBrowserInput", LoadSceneMode.Single);
         }
+
         private void OnPressedAR()
         {
             SceneManager.LoadScene("ARFoundation", LoadSceneMode.Single);
