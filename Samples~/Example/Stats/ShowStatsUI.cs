@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -128,9 +127,9 @@ namespace Unity.RenderStreaming.Samples
         IEnumerator UpdateStats(RTCRtpReceiver receiver)
         {
             var op = receiver.GetStats();
-            yield return op;
+            yield return new WaitUntilWithTimeout(() => op.IsDone, 3f);
 
-            if (op.IsError)
+            if (op.IsError || !op.IsDone)
             {
                 yield break;
             }
@@ -160,10 +159,9 @@ namespace Unity.RenderStreaming.Samples
         IEnumerator UpdateStats(RTCRtpSender sender)
         {
             var op = sender.GetStats();
-            yield return op;
+            yield return new WaitUntilWithTimeout(() => op.IsDone, 3f);
 
-
-            if (op.IsError)
+            if (op.IsError || !op.IsDone)
             {
                 yield break;
             }
@@ -215,11 +213,13 @@ namespace Unity.RenderStreaming.Samples
                 {
                     foreach (var sender in hashSet)
                     {
-                        DestroyImmediate(lastSenderStats[sender].display.gameObject);
-                        lastSenderStats.Remove(sender);
+                        if (lastSenderStats.TryGetValue(sender, out var statsDisplay))
+                        {
+                            DestroyImmediate(statsDisplay.display.gameObject);
+                            lastSenderStats.Remove(sender);
+                        }
                     }
                 }
-
                 activeSenderList.Remove(id);
             };
 
@@ -247,7 +247,10 @@ namespace Unity.RenderStreaming.Samples
 
             receiverBase.OnStartedStream += id =>
             {
-                activeReceiverList[receiverBase].Add(receiverBase.Transceiver.Receiver);
+                if(activeReceiverList.TryGetValue(receiverBase, out var hashSet))
+                {
+                    hashSet.Add(receiverBase.Transceiver.Receiver);
+                }
             };
             receiverBase.OnStoppedStream += id =>
             {
@@ -255,11 +258,13 @@ namespace Unity.RenderStreaming.Samples
                 {
                     foreach (var receiver in hashSet)
                     {
-                        DestroyImmediate(lastReceiverStats[receiver].display.gameObject);
-                        lastReceiverStats.Remove(receiver);
+                        if (lastReceiverStats.TryGetValue(receiver, out var statsDisplay))
+                        {
+                            DestroyImmediate(statsDisplay.display.gameObject);
+                            lastReceiverStats.Remove(receiver);
+                        }
                     }
                 }
-
                 activeReceiverList.Remove(receiverBase);
             };
 
@@ -369,6 +374,35 @@ namespace Unity.RenderStreaming.Samples
             }
 
             return builder.ToString();
+        }
+    }
+
+    internal class WaitUntilWithTimeout : CustomYieldInstruction
+    {
+        public bool IsCompleted { get; private set; }
+
+        private readonly float timeoutTime;
+
+        private readonly System.Func<bool> predicate;
+
+        public override bool keepWaiting
+        {
+            get
+            {
+                IsCompleted = predicate();
+                if (IsCompleted)
+                {
+                    return false;
+                }
+
+                return !(Time.realtimeSinceStartup >= timeoutTime);
+            }
+        }
+
+        public WaitUntilWithTimeout(System.Func<bool> predicate, float timeout)
+        {
+            this.timeoutTime = Time.realtimeSinceStartup + timeout;
+            this.predicate = predicate;
         }
     }
 }
