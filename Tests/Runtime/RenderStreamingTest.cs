@@ -1,87 +1,95 @@
-using System.Collections;
+using System.Linq;
 using NUnit.Framework;
 using Unity.RenderStreaming.RuntimeTest.Signaling;
 using Unity.RenderStreaming.Signaling;
 using UnityEngine;
 using UnityEngine.TestTools;
-using Object = UnityEngine.Object;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Unity.RenderStreaming.RuntimeTest
 {
-    class RenderStreamingTest
+    class RenderStreamingTest : IPrebuildSetup, IPostBuildCleanup
     {
-        RenderStreaming component;
+        private RenderStreamingSettings temp;
 
         [SetUp]
-        public void SetUp()
+        public void SetUpTest()
         {
-            GameObject obj = new GameObject();
-            obj.SetActive(false);
-            component = obj.AddComponent<RenderStreaming>();
+            temp = RenderStreaming.Settings;
         }
 
         [TearDown]
         public void TearDown()
         {
-            Object.DestroyImmediate(component.gameObject);
+            if (temp != null)
+            {
+                RenderStreaming.Settings = temp;
+            }
+        }
+
+        void IPrebuildSetup.Setup()
+        {
+#if UNITY_EDITOR
+            var defaultSettings = RenderStreaming.Settings;
+            RenderStreaming.Settings =
+                AssetDatabase.LoadAssetAtPath<RenderStreamingSettings>(RenderStreaming.DefaultRenderStreamingSettingsPath);
+            if (defaultSettings != null)
+            {
+                EditorBuildSettings.AddConfigObject(RenderStreaming.EditorBuildSettingsConfigKey, defaultSettings, true);
+            }
+#endif
+        }
+
+        void IPostBuildCleanup.Cleanup()
+        {
+#if UNITY_EDITOR
+            if (EditorBuildSettings.TryGetConfigObject(RenderStreaming.EditorBuildSettingsConfigKey, out RenderStreamingSettings settingsAsset))
+            {
+                RenderStreaming.Settings = settingsAsset;
+            }
+            else
+            {
+                RenderStreaming.Settings =
+                    AssetDatabase.LoadAssetAtPath<RenderStreamingSettings>(RenderStreaming.DefaultRenderStreamingSettingsPath);
+            }
+#endif
         }
 
         [Test]
-        public void DoNothing()
+        public void Settings()
         {
+            Assert.That(() => RenderStreaming.Settings = null, Throws.ArgumentNullException);
+
+            var settings = ScriptableObject.CreateInstance<RenderStreamingSettings>();
+            settings.signalingSettings = new MockSignalingSettings();
+
+            RenderStreaming.Settings = settings;
+            Assert.That(RenderStreaming.Settings.automaticStreaming, Is.EqualTo(settings.automaticStreaming));
+            Assert.That(RenderStreaming.Settings.signalingSettings, Is.EqualTo(settings.signalingSettings));
+
+            Object.DestroyImmediate(settings);
         }
 
         [Test]
-        public void Run()
+        public void AutomaticStreaming()
         {
-            var handler = component.gameObject.AddComponent<SingleConnection>();
-            var handlers = new SignalingHandlerBase[] { handler };
-            ISignaling mock = new MockSignaling();
-            component.runOnAwake = false;
-            component.gameObject.SetActive(true);
-            component.Run(signaling: mock, handlers: handlers);
-        }
+            var settings = ScriptableObject.CreateInstance<RenderStreamingSettings>();
+            settings.automaticStreaming = false;
+            settings.signalingSettings = new WebSocketSignalingSettings();
+            RenderStreaming.Settings = settings;
 
-        [Test, Ignore("Failed this test on macOS and Linux platform because of the signaling process.")]
-        public void RunDefault()
-        {
-            var handler = component.gameObject.AddComponent<SingleConnection>();
-            var handlers = new SignalingHandlerBase[] { handler };
-            ISignaling mock = new MockSignaling();
-            component.runOnAwake = false;
-            component.gameObject.SetActive(true);
-            component.Run(handlers:handlers);
-        }
+            RenderStreaming.AutomaticStreaming = true;
+            var automaticStreaming = Object.FindObjectOfType<AutomaticStreaming>();
+            Assert.That(automaticStreaming, Is.Not.Null);
 
+            RenderStreaming.AutomaticStreaming = false;
+            automaticStreaming = Object.FindObjectOfType<AutomaticStreaming>();
+            Assert.That(automaticStreaming, Is.Null);
 
-        [Test]
-        public void ThrowExceptionIfHandlerIsNullOrEmpty()
-        {
-            ISignaling mock = new MockSignaling();
-            component.runOnAwake = false;
-            component.gameObject.SetActive(true);
-            Assert.That(() => component.Run(signaling: mock),
-                Throws.InvalidOperationException);
-
-            var handlers = new SignalingHandlerBase[] {};
-            Assert.That(() => component.Run(signaling: mock, handlers:handlers),
-                Throws.InvalidOperationException);
-        }
-
-
-        [UnityTest]
-        public IEnumerator RunAgain()
-        {
-            var handler = component.gameObject.AddComponent<SingleConnection>();
-            var handlers = new SignalingHandlerBase[] { handler };
-            ISignaling mock = new MockSignaling();
-            component.runOnAwake = false;
-            component.gameObject.SetActive(true);
-            component.Run(signaling:mock, handlers:handlers);
-            yield return 0;
-            component.Stop();
-            yield return 0;
-            component.Run(signaling:mock, handlers:handlers);
+            Object.DestroyImmediate(settings);
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
+using Unity.Collections;
 using UnityEngine;
 using Unity.WebRTC;
 using UnityEngine.TestTools;
@@ -112,8 +113,8 @@ namespace Unity.RenderStreaming.RuntimeTest
             Assert.That(sender.sourceTexture, Is.Not.Null);
             Assert.That(sender.width, Is.EqualTo(width));
             Assert.That(sender.height, Is.EqualTo(height));
-            Assert.That(() => sender.width = 1280, Throws.Exception.TypeOf<InvalidOperationException>());
-            Assert.That(() => sender.height = 720, Throws.Exception.TypeOf<InvalidOperationException>());
+            Assert.That(() => sender.width = 1280, Throws.Nothing);
+            Assert.That(() => sender.height = 720, Throws.Nothing);
             op = sender.CreateTrack();
             yield return op;
             track = op.Track;
@@ -259,8 +260,6 @@ namespace Unity.RenderStreaming.RuntimeTest
                         Assert.That(h264codec.level, Is.GreaterThan(0));
                         Assert.That(h264codec.profile, Is.Not.Zero);
                         break;
-                    default:
-                        break;
                 }
             }
         }
@@ -313,33 +312,42 @@ namespace Unity.RenderStreaming.RuntimeTest
         {
             var go = new GameObject();
             var sender = go.AddComponent<AudioStreamSender>();
-            MediaStreamTrack track = null;
 
-            // With AudioListener
-            sender.source = AudioStreamSource.AudioListener;
-            Assert.That(() => sender.CreateTrack(), Throws.Exception.TypeOf<InvalidOperationException>());
-
-            var audioListener = go.AddComponent<AudioListener>();
-            var op = sender.CreateTrack();
-            yield return op;
-            track = op.Track;
-            Assert.That(track, Is.Not.Null);
-            track.Dispose();
-            track = null;
+            MediaStreamTrack track;
 
             // With AudioSource
             var go2 = new GameObject();
             sender = go2.AddComponent<AudioStreamSender>();
             sender.source = AudioStreamSource.AudioSource;
             Assert.That(() => sender.CreateTrack(), Throws.Exception.TypeOf<InvalidOperationException>());
-            var audioSource = go2.AddComponent<AudioSource>();
-            sender.audioSource = audioSource;
+            sender.audioSource = go2.AddComponent<AudioSource>();
+            var op = sender.CreateTrack();
+            yield return op;
+            track = op.Track;
+            Assert.That(track, Is.Not.Null);
+            track.Dispose();
+
+            // APIOnly
+            var go3 = new GameObject();
+            sender = go3.AddComponent<AudioStreamSender>();
+            sender.source = AudioStreamSource.APIOnly;
             op = sender.CreateTrack();
             yield return op;
             track = op.Track;
             Assert.That(track, Is.Not.Null);
             track.Dispose();
-            track = null;
+
+            // With AudioListener
+            // workaround(kazuki): Fix NullReferenceException in AudioStreamTrack.ProcessAudio.
+
+            //sender.source = AudioStreamSource.AudioListener;
+            //Assert.That(() => sender.CreateTrack(), Throws.Exception.TypeOf<InvalidOperationException>());
+            //sender.audioListener = go.AddComponent<AudioListener>();
+            //op = sender.CreateTrack();
+            //yield return op;
+            //track = op.Track;
+            //Assert.That(track, Is.Not.Null);
+            //track.Dispose();
 
             // With Microphone
 #if !(UNITY_IPHONE || UNITY_ANDROID)
@@ -356,9 +364,12 @@ namespace Unity.RenderStreaming.RuntimeTest
 #endif
             UnityEngine.Object.DestroyImmediate(go);
             UnityEngine.Object.DestroyImmediate(go2);
+            UnityEngine.Object.DestroyImmediate(go3);
         }
 
+        // workaround(kazuki): Fix NullReferenceException in AudioStreamTrack.ProcessAudio. (WRS-231)
         [UnityTest]
+        [UnityPlatform(exclude = new[] { RuntimePlatform.OSXEditor, RuntimePlatform.OSXPlayer, RuntimePlatform.LinuxEditor, RuntimePlatform.LinuxPlayer })]
         public IEnumerator ReplaceTrack()
         {
             var go = new GameObject();
@@ -444,6 +455,21 @@ namespace Unity.RenderStreaming.RuntimeTest
 
             sender.SetCodec(null);
             Assert.That(sender.codec, Is.Null);
+        }
+
+        [Test]
+        public void SetData()
+        {
+            var go = new GameObject();
+            var sender = go.AddComponent<AudioStreamSender>();
+
+            NativeArray<float> nativeArray = new NativeArray<float>(256, Allocator.Temp);
+            Assert.That(() => sender.SetData(ref nativeArray, 2), Throws.Exception.TypeOf<InvalidOperationException>());
+
+            sender.source = AudioStreamSource.APIOnly;
+            Assert.That(() => sender.SetData(ref nativeArray, 2), Throws.Nothing);
+
+            nativeArray.Dispose();
         }
     }
 

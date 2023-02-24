@@ -9,22 +9,26 @@ using UnityEngine;
 namespace Unity.RenderStreaming
 {
     /// <summary>
-    /// 
+    ///
     /// </summary>
     public enum AudioStreamSource
     {
         /// <summary>
-        /// 
+        ///
         /// </summary>
         AudioListener = 0,
         /// <summary>
-        /// 
+        ///
         /// </summary>
         AudioSource = 1,
         /// <summary>
-        /// 
+        ///
         /// </summary>
-        Microphone = 2
+        Microphone = 2,
+        /// <summary>
+        ///
+        /// </summary>
+        APIOnly = 3
     }
 
     /// <summary>
@@ -61,27 +65,30 @@ namespace Unity.RenderStreaming
 
         private AudioStreamSourceImpl m_sourceImpl = null;
 
-        /// workaround.
-        private Action<float[], int, int> m_onAudioFilterRead = null;
-
         private int m_frequency = 48000;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public AudioStreamSource source
         {
             get { return m_Source; }
             set
             {
-                if (isPlaying)
-                    throw new InvalidOperationException("Can not change this parameter after the streaming is started.");
+                if (m_Source == value)
+                    return;
                 m_Source = value;
+
+                if (!isPlaying)
+                    return;
+
+                var op = CreateTrack();
+                StartCoroutineWithCallback(op, _ => ReplaceTrack(_.Track));
             }
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public AudioCodecInfo codec
         {
@@ -89,7 +96,7 @@ namespace Unity.RenderStreaming
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public uint minBitrate
         {
@@ -97,7 +104,7 @@ namespace Unity.RenderStreaming
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public uint maxBitrate
         {
@@ -112,42 +119,60 @@ namespace Unity.RenderStreaming
             get { return m_MicrophoneDeviceIndex; }
             set
             {
-                if (isPlaying)
-                    throw new InvalidOperationException("Can not change this parameter after the streaming is started.");
+                if (m_MicrophoneDeviceIndex == value)
+                    return;
                 m_MicrophoneDeviceIndex = value;
+
+                if (!isPlaying || m_Source != AudioStreamSource.Microphone)
+                    return;
+
+                var op = CreateTrack();
+                StartCoroutineWithCallback(op, _ => ReplaceTrack(_.Track));
             }
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public AudioSource audioSource
         {
             get { return m_AudioSource; }
             set
             {
-                if (isPlaying)
-                    throw new InvalidOperationException("Can not change this parameter after the streaming is started.");
+                if (m_AudioSource == value)
+                    return;
                 m_AudioSource = value;
+
+                if (!isPlaying || m_Source != AudioStreamSource.AudioSource)
+                    return;
+
+                var op = CreateTrack();
+                StartCoroutineWithCallback(op, _ => ReplaceTrack(_.Track));
             }
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public AudioListener audioListener
         {
             get { return m_AudioListener; }
             set
             {
-                if (isPlaying)
-                    throw new InvalidOperationException("Can not change this parameter after the streaming is started.");
+                if (m_AudioListener == value)
+                    return;
                 m_AudioListener = value;
+
+                if (!isPlaying || m_Source != AudioStreamSource.AudioListener)
+                    return;
+
+                var op = CreateTrack();
+                StartCoroutineWithCallback(op, _ => ReplaceTrack(_.Track));
             }
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <returns></returns>
         static public IEnumerable<AudioCodecInfo> GetAvailableCodecs()
@@ -158,7 +183,7 @@ namespace Unity.RenderStreaming
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="minBitrate"></param>
         /// <param name="maxBitrate"></param>
@@ -177,7 +202,7 @@ namespace Unity.RenderStreaming
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="codec"></param>
         public void SetCodec(AudioCodecInfo codec)
@@ -244,14 +269,13 @@ namespace Unity.RenderStreaming
             switch (m_Source)
             {
                 case AudioStreamSource.AudioListener:
-                    var source = new AudioStreamSourceAudioListener(this);
-                    // todo:: workaround.
-                    m_onAudioFilterRead = source.OnAudioFilterRead;
-                    return source;
+                    return new AudioStreamSourceAudioListener(this);
                 case AudioStreamSource.AudioSource:
                     return new AudioStreamSourceAudioSource(this);
                 case AudioStreamSource.Microphone:
                     return new AudioStreamSourceMicrophone(this);
+                case AudioStreamSource.APIOnly:
+                    return new AudioStreamSourceAPIOnly(this);
             }
             throw new InvalidOperationException("");
         }
@@ -270,18 +294,18 @@ namespace Unity.RenderStreaming
             base.OnDisable();
         }
 
-        /// workaround.
-        /// todo: Should add AudioStreamTrack supports AudioListener
-        void OnAudioFilterRead(float[] data, int channels)
+        public void SetData(ref NativeArray<float> nativeArray, int channels)
         {
-            // todo: Should add AudioStreamTrack supports AudioListener
-            if (m_Source == AudioStreamSource.AudioListener && m_onAudioFilterRead != null)
-                m_onAudioFilterRead(data, channels, m_sampleRate);
+            if (m_Source != AudioStreamSource.APIOnly)
+                throw new InvalidOperationException("To use this method, please set AudioStreamSource.APIOnly to source property");
+            if (!isPlaying)
+                return;
+            (m_sourceImpl as AudioStreamSourceAPIOnly)?.SetData(ref nativeArray, channels, m_sampleRate);
         }
 
         abstract class AudioStreamSourceImpl : IDisposable
         {
-            public AudioStreamSourceImpl(AudioStreamSender parent)
+            protected AudioStreamSourceImpl(AudioStreamSender parent)
             {
             }
 
@@ -291,26 +315,24 @@ namespace Unity.RenderStreaming
 
         class AudioStreamSourceAudioListener : AudioStreamSourceImpl
         {
-            AudioStreamTrack m_audioTrack;
+            private AudioListener m_audioListener;
 
             public AudioStreamSourceAudioListener(AudioStreamSender parent) : base(parent)
             {
-                // todo: Should add AudioStreamTrack supports AudioListener
-                if (!parent.GetComponent<AudioListener>())
-                    throw new InvalidOperationException("Audio Listener have to be set the same gameObject.");
+                m_audioListener = parent.m_AudioListener;
+                if (m_audioListener == null)
+                    throw new InvalidOperationException("The audioListener is not assigned.");
             }
 
             public override WaitForCreateTrack CreateTrack()
             {
                 var instruction = new WaitForCreateTrack();
-                m_audioTrack = new AudioStreamTrack();
-                instruction.Done(m_audioTrack);
+                instruction.Done(new AudioStreamTrack(m_audioListener));
                 return instruction;
             }
 
             public override void Dispose()
             {
-                m_audioTrack = null;
                 GC.SuppressFinalize(this);
             }
 
@@ -318,29 +340,11 @@ namespace Unity.RenderStreaming
             {
                 Dispose();
             }
-
-            public void OnAudioFilterRead(float[] data, int channels, int sampleRate)
-            {
-                NativeArray<float> nativeArray = new NativeArray<float>(data, Allocator.Temp);
-                try
-                {
-                    m_audioTrack?.SetData(ref nativeArray, channels, sampleRate);
-                }
-                // todo(kazuki):: Should catch only ObjectDisposedException but
-                // AudioStreamTrack also throws NullReferenceException.
-                catch (Exception)
-                {
-                }
-                finally
-                {
-                    nativeArray.Dispose();
-                }
-            }
         }
 
         class AudioStreamSourceAudioSource : AudioStreamSourceImpl
         {
-            AudioSource m_audioSource;
+            private AudioSource m_audioSource;
             public AudioStreamSourceAudioSource(AudioStreamSender parent) : base(parent)
             {
                 m_audioSource = parent.m_AudioSource;
@@ -373,6 +377,7 @@ namespace Unity.RenderStreaming
             int m_frequency;
             string m_deviceName;
             AudioSource m_audioSource;
+            GameObject m_audioSourceObj;
             AudioStreamSender m_parent;
 
             public AudioStreamSourceMicrophone(AudioStreamSender parent) : base(parent)
@@ -410,12 +415,10 @@ namespace Unity.RenderStreaming
                 // set the latency to “0” samples before the audio starts to play.
                 yield return new WaitUntil(() => Microphone.GetPosition(m_deviceName) > 0);
 
-                /// todo: Throw exception if gameObject already has the AudioSource.
-                /// To fix this, fix the issue of AudioStreamTrack first.
-                m_audioSource = m_parent.gameObject.GetComponent<AudioSource>();
-                if(m_audioSource == null)
-                    m_audioSource = m_parent.gameObject.AddComponent<AudioSource>();
-
+                m_audioSourceObj = new GameObject("Audio");
+                m_audioSourceObj.hideFlags = HideFlags.HideInHierarchy;
+                DontDestroyOnLoad(m_audioSourceObj);
+                m_audioSource = m_audioSourceObj.AddComponent<AudioSource>();
                 m_audioSource.clip = micClip;
                 m_audioSource.loop = true;
                 m_audioSource.Play();
@@ -425,7 +428,7 @@ namespace Unity.RenderStreaming
 
             public override void Dispose()
             {
-                if (m_audioSource != null)
+                if (m_audioSourceObj != null)
                 {
                     m_audioSource.Stop();
                     var clip = m_audioSource.clip;
@@ -435,12 +438,8 @@ namespace Unity.RenderStreaming
                     }
                     m_audioSource.clip = null;
 
-                    /// todo: AudioCustomFilter should be removed before destroying m_audioSource because
-                    /// AudioSource is the RequiredComponent by AudioCustomFilter. But AudioStreamTrack removes
-                    /// the AudioCustomFilter asyncnouslly. So we got the error log below.
-                    /// "Can't remove AudioSource because AudioCustomFilter (Script) depends on it"
-
-                    // Destroy(m_audioSource);
+                    Destroy(m_audioSourceObj);
+                    m_audioSourceObj = null;
                     m_audioSource = null;
                 }
                 if (Microphone.IsRecording(m_deviceName))
@@ -449,6 +448,39 @@ namespace Unity.RenderStreaming
             }
 
             ~AudioStreamSourceMicrophone()
+            {
+                Dispose();
+            }
+        }
+
+        class AudioStreamSourceAPIOnly : AudioStreamSourceImpl
+        {
+            AudioStreamTrack m_audioTrack;
+
+            public AudioStreamSourceAPIOnly(AudioStreamSender parent) : base(parent)
+            {
+
+            }
+
+            public override WaitForCreateTrack CreateTrack()
+            {
+                var instruction = new WaitForCreateTrack();
+                m_audioTrack = new AudioStreamTrack();
+                instruction.Done(new AudioStreamTrack());
+                return instruction;
+            }
+
+            public void SetData(ref NativeArray<float> nativeArray, int channels, int sampleRate)
+            {
+                m_audioTrack?.SetData(ref nativeArray, channels, sampleRate);
+            }
+
+            public override void Dispose()
+            {
+                GC.SuppressFinalize(this);
+            }
+
+            ~AudioStreamSourceAPIOnly()
             {
                 Dispose();
             }

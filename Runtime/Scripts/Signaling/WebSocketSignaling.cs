@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Authentication;
 using System.Text;
 using System.Threading;
@@ -10,30 +12,43 @@ namespace Unity.RenderStreaming.Signaling
 {
     public class WebSocketSignaling : ISignaling
     {
-        private string m_url;
-        private float m_timeout;
-        private SynchronizationContext m_mainThreadContext;
+        private static HashSet<WebSocketSignaling> instances = new HashSet<WebSocketSignaling>();
+
+        private readonly string m_url;
+        private readonly float m_timeout;
+        private readonly SynchronizationContext m_mainThreadContext;
         private bool m_running;
         private Thread m_signalingThread;
-        private AutoResetEvent m_wsCloseEvent;
+        private readonly AutoResetEvent m_wsCloseEvent;
         private WebSocket m_webSocket;
 
         public string Url { get { return m_url; } }
 
-        public float Interval { get { return m_timeout; } }
-
-        public WebSocketSignaling(string url, float timeout, SynchronizationContext mainThreadContext)
+        public WebSocketSignaling(SignalingSettings signalingSettings, SynchronizationContext mainThreadContext)
         {
-            m_url = url;
-            m_timeout = timeout;
+            if(signalingSettings == null)
+                throw new ArgumentNullException(nameof(signalingSettings));
+            if(!(signalingSettings is WebSocketSignalingSettings settings))
+                throw new ArgumentException("signalingSettings is not WebSocketSignalingSettings");
+            m_url = settings.url;
+            m_timeout = 5.0f;
             m_mainThreadContext = mainThreadContext;
             m_wsCloseEvent = new AutoResetEvent(false);
+
+            if (instances.Any(x => x.Url == m_url))
+            {
+                Debug.LogWarning($"Other {nameof(WebSocketSignaling)} exists with same URL:{m_url}. Signaling process may be in conflict.");
+            }
+
+            instances.Add(this);
         }
 
         ~WebSocketSignaling()
         {
             if (m_running)
                 Stop();
+
+            instances.Remove(this);
         }
 
         public void Start()

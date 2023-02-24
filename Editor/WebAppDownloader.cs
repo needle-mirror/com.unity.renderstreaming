@@ -7,7 +7,7 @@ namespace Unity.RenderStreaming.Editor
     internal static class WebAppDownloader
     {
         const string URLRoot = "https://github.com/Unity-Technologies/UnityRenderStreaming";
-        const string LatestKnownVersion = "3.1.0-exp.5";
+        const string LatestKnownVersion = "3.1.0-exp.6";
 
         // TODO::fix release process of webserver runtime.
         const string FileNameWebAppForMac = "webserver_mac";
@@ -50,9 +50,7 @@ namespace Unity.RenderStreaming.Editor
 
         public static string GetURLSourceCode(string version)
         {
-            var pattern = @"\d+.\d+.\d+";
-            var result = System.Text.RegularExpressions.Regex.Match(version, pattern);
-            return System.IO.Path.Combine(URLRoot, string.Format(PathWebAppSourceCode, result.Value));
+            return System.IO.Path.Combine(URLRoot, string.Format(PathWebAppSourceCode, version));
         }
 
         public static void DownloadCurrentVersionWebApp(string dstPath, System.Action<bool> callback) {

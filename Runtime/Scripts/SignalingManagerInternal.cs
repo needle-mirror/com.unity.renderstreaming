@@ -5,7 +5,6 @@ using System.Linq;
 using UnityEngine;
 using Unity.RenderStreaming.Signaling;
 using Unity.WebRTC;
-using UnityEngine.Assertions;
 
 namespace Unity.RenderStreaming
 {
@@ -43,7 +42,7 @@ namespace Unity.RenderStreaming
     /// <summary>
     ///
     /// </summary>
-    internal class RenderStreamingInternal : IDisposable,
+    internal class SignalingManagerInternal : IDisposable,
         IRenderStreamingHandler, IRenderStreamingDelegate
     {
         /// <summary>
@@ -105,7 +104,7 @@ namespace Unity.RenderStreaming
         ///
         /// </summary>
         /// <param name="dependencies"></param>
-        public RenderStreamingInternal(ref RenderStreamingDependencies dependencies)
+        public SignalingManagerInternal(ref RenderStreamingDependencies dependencies)
         {
             if (dependencies.signaling == null)
                 throw new ArgumentException("Signaling instance is null.");
@@ -130,7 +129,7 @@ namespace Unity.RenderStreaming
         /// <summary>
         ///
         /// </summary>
-        ~RenderStreamingInternal()
+        ~SignalingManagerInternal()
         {
             Dispose();
         }

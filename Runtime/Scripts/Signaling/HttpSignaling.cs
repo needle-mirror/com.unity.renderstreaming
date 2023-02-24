@@ -11,25 +11,27 @@ namespace Unity.RenderStreaming.Signaling
 {
     public class HttpSignaling : ISignaling
     {
-        private string m_url;
-        private float m_timeout;
-        private SynchronizationContext m_mainThreadContext;
+        private static HashSet<HttpSignaling> instances = new HashSet<HttpSignaling>();
+
+        private readonly string m_url;
+        private readonly int m_timeout;
+        private readonly SynchronizationContext m_mainThreadContext;
         private bool m_running;
         private Thread m_signalingThread;
 
         private string m_sessionId;
         private long m_lastTimeGetAllRequest;
-        private long m_lastTimeGetOfferRequest;
-        private long m_lastTimeGetAnswerRequest;
-        private long m_lastTimeGetCandidateRequest;
 
 	    public string Url { get { return m_url; } }
-	    public float Interval { get { return m_timeout; } }
 
-        public HttpSignaling(string url, float timeout, SynchronizationContext mainThreadContext)
+        public HttpSignaling(SignalingSettings signalingSettings, SynchronizationContext mainThreadContext)
         {
-            m_url = url;
-            m_timeout = timeout;
+            if (signalingSettings == null)
+                throw new ArgumentNullException(nameof(signalingSettings));
+            if (!(signalingSettings is HttpSignalingSettings settings))
+                throw new ArgumentException("signalingSettings is not HttpSignalingSettings");
+            m_url = settings.url;
+            m_timeout = settings.interval;
             m_mainThreadContext = mainThreadContext;
 
             if (m_url.StartsWith("https"))
@@ -37,11 +39,19 @@ namespace Unity.RenderStreaming.Signaling
                 ServicePointManager.ServerCertificateValidationCallback =
                     (sender, certificate, chain, errors) => true;
             }
+
+            if (instances.Any(x => x.Url == m_url))
+            {
+                Debug.LogWarning($"Other {nameof(HttpSignaling)} exists with same URL:{m_url}. Signaling process may be in conflict.");
+            }
+
+            instances.Add(this);
         }
 
         ~HttpSignaling()
         {
             Stop();
+            instances.Remove(this);
         }
 
         public void Start()
@@ -123,16 +133,13 @@ namespace Unity.RenderStreaming.Signaling
         {
             // ignore messages arrived before 30 secs ago
             m_lastTimeGetAllRequest = DateTime.UtcNow.Millisecond - 30000;
-            m_lastTimeGetOfferRequest = DateTime.UtcNow.Millisecond - 30000;
-            m_lastTimeGetAnswerRequest = DateTime.UtcNow.Millisecond - 30000;
-            m_lastTimeGetCandidateRequest = DateTime.UtcNow.Millisecond - 30000;
 
             while (m_running && string.IsNullOrEmpty(m_sessionId))
             {
                 HTTPCreate();
                 try
                 {
-                    Thread.Sleep((int)(m_timeout * 1000));
+                    Thread.Sleep(m_timeout);
                 }
                 catch (ThreadAbortException)
                 {
@@ -146,7 +153,7 @@ namespace Unity.RenderStreaming.Signaling
                 try
                 {
                     HTTPGetAll();
-                    Thread.Sleep((int)(m_timeout * 1000));
+                    Thread.Sleep(m_timeout);
                 }
                 catch (ThreadAbortException)
                 {

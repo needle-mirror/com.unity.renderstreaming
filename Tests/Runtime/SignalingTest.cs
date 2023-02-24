@@ -88,9 +88,9 @@ namespace Unity.RenderStreaming.RuntimeTest
 
             string arguments = $"-p {TestUtility.PortNumber}";
 
-            if (m_SignalingType == typeof(WebSocketSignaling))
+            if (m_SignalingType == typeof(HttpSignaling))
             {
-                arguments += " -w";
+                arguments += " -t http";
             }
 
             startInfo.Arguments = arguments;
@@ -118,12 +118,21 @@ namespace Unity.RenderStreaming.RuntimeTest
         {
             if (type == typeof(WebSocketSignaling))
             {
-                return new WebSocketSignaling($"ws://localhost:{TestUtility.PortNumber}", 0.1f, mainThread);
+                var settings = new WebSocketSignalingSettings
+                (
+                    url: $"ws://localhost:{TestUtility.PortNumber}"
+                );
+                return new WebSocketSignaling(settings, mainThread);
             }
 
             if (type == typeof(HttpSignaling))
             {
-                return new HttpSignaling($"http://localhost:{TestUtility.PortNumber}", 0.1f, mainThread);
+                var settings = new HttpSignalingSettings
+                (
+                    url:  $"http://localhost:{TestUtility.PortNumber}",
+                    interval: 100
+                );
+                return new HttpSignaling(settings, mainThread);
             }
 
             if (type == typeof(MockSignaling))

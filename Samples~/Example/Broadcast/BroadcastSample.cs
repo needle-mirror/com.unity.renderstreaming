@@ -31,15 +31,24 @@ namespace Unity.RenderStreaming.Samples
 
     class BroadcastSample : MonoBehaviour
     {
-        [SerializeField] private RenderStreaming renderStreaming;
+        [SerializeField] private SignalingManager renderStreaming;
         [SerializeField] private InputReceiver inputReceiver;
         [SerializeField] private SimpleCameraControllerV2 cameraController;
         [SerializeField] private UIControllerV2 uiController;
         [SerializeField] private VideoStreamSender videoStreamSender;
+        [SerializeField] private Dropdown videoSourceTypeSelector;
         [SerializeField] private Dropdown bandwidthSelector;
         [SerializeField] private Dropdown scaleResolutionDownSelector;
         [SerializeField] private Dropdown framerateSelector;
         [SerializeField] private Dropdown resolutionSelector;
+
+        private Dictionary<string, VideoStreamSource> videoSourceTypeOptions = new Dictionary<string, VideoStreamSource>
+        {
+            {"Screen", VideoStreamSource.Screen },
+            {"Camera", VideoStreamSource.Camera },
+            {"Texture", VideoStreamSource.Texture },
+            {"WebCam", VideoStreamSource.WebCamera }
+        };
 
         private Dictionary<string, uint> bandwidthOptions =
             new Dictionary<string, uint>()
@@ -105,6 +114,10 @@ namespace Unity.RenderStreaming.Samples
                 }
                 videoStreamSender.SetCodec(settings.SenderVideoCodec);
             }
+            videoSourceTypeSelector.options = videoSourceTypeOptions
+                .Select(pair => new Dropdown.OptionData { text = pair.Key })
+                .ToList();
+            videoSourceTypeSelector.onValueChanged.AddListener(ChangeVideoSourceType);
 
             bandwidthSelector.options = bandwidthOptions
                 .Select(pair => new Dropdown.OptionData {text = pair.Key})
@@ -131,6 +144,12 @@ namespace Unity.RenderStreaming.Samples
             resolutionSelector.onValueChanged.AddListener(ChangeResolution);
         }
 
+        private void ChangeVideoSourceType(int index)
+        {
+            var source = videoSourceTypeOptions.Values.ElementAt(index);
+            videoStreamSender.source = source;
+        }
+
         private void ChangeBandwidth(int index)
         {
             var bitrate = bandwidthOptions.Values.ElementAt(index);
@@ -154,11 +173,8 @@ namespace Unity.RenderStreaming.Samples
         {
             var resolution = resolutionOptions.Values.ElementAt(index);
 
-            if (videoStreamSender.source != VideoStreamSource.Texture)
-            {
-                videoStreamSender.SetTextureSize(resolution);
-                CalculateInputRegion();
-            }
+            videoStreamSender.SetTextureSize(resolution);
+            CalculateInputRegion();
         }
 
         private void Start()
@@ -167,7 +183,11 @@ namespace Unity.RenderStreaming.Samples
 
             if (renderStreaming.runOnAwake)
                 return;
-            renderStreaming.Run(signaling: settings?.Signaling);
+            if(settings != null)
+                renderStreaming.useDefaultSettings = settings.UseDefaultSettings;
+            if (settings?.SignalingSettings != null)
+                renderStreaming.SetSignalingSettings(settings.SignalingSettings);
+            renderStreaming.Run();
 
             inputReceiver.OnStartedChannel += OnStartedChannel;
             var map = inputReceiver.currentActionMap;

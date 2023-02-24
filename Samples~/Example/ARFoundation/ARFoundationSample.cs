@@ -11,7 +11,7 @@ namespace Unity.RenderStreaming.Samples
     internal class ARFoundationSample : MonoBehaviour
     {
 #pragma warning disable 0649
-        [SerializeField] private RenderStreaming renderStreaming;
+        [SerializeField] private SignalingManager renderStreaming;
         [SerializeField] private Button startButton;
         [SerializeField] private Button stopButton;
         [SerializeField] private RawImage remoteVideoImage;
@@ -48,7 +48,11 @@ namespace Unity.RenderStreaming.Samples
         {
             if (!renderStreaming.runOnAwake)
             {
-                renderStreaming.Run(signaling: settings?.Signaling);
+                if (settings != null)
+                    renderStreaming.useDefaultSettings = settings.UseDefaultSettings;
+                if (settings?.SignalingSettings != null)
+                    renderStreaming.SetSignalingSettings(settings.SignalingSettings);
+                renderStreaming.Run();
             }
 
             if ((ARSession.state == ARSessionState.None ) ||
