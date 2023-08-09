@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Unity.RenderStreaming
 {
@@ -15,13 +15,6 @@ namespace Unity.RenderStreaming
         public static long ToJsMilliseconds(this DateTime dt)
         {
             return (long)((dt.ToUniversalTime().Ticks - DatetimeMinTimeTicks) / 10000);
-        }
-
-        public static DateTime ParseHttpDate(string text)
-        {
-            return DateTime.ParseExact(text,
-                                "ddd, dd MMM yyyy HH:mm:ss Z",
-                                System.Globalization.CultureInfo.InvariantCulture);
         }
     }
 }

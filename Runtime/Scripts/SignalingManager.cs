@@ -1,11 +1,11 @@
 using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
-using UnityEngine;
-using Unity.WebRTC;
 using Unity.RenderStreaming.Signaling;
+using Unity.WebRTC;
+using UnityEngine;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -16,8 +16,15 @@ namespace Unity.RenderStreaming
     [AddComponentMenu("Render Streaming/Signaling Manager")]
     public sealed class SignalingManager : MonoBehaviour
     {
+        internal const string UseDefaultPropertyName = nameof(m_useDefault);
+        internal const string SignalingSettingsObjectPropertyName = nameof(signalingSettingsObject);
+        internal const string SignalingSettingsPropertyName = nameof(signalingSettings);
+        internal const string HandlersPropertyName = nameof(handlers);
+        internal const string RunOnAwakePropertyName = nameof(runOnAwake);
+        internal const string EvaluateCommandlineArgumentsPropertyName = nameof(evaluateCommandlineArguments);
+
 #pragma warning disable 0649
-        [SerializeField]
+        [SerializeField, Tooltip("Use settings in Project Settings Window.")]
         private bool m_useDefault = true;
 
         [SerializeField]
@@ -47,6 +54,9 @@ namespace Unity.RenderStreaming
         private SignalingEventProvider m_provider;
         private bool m_running;
 
+        /// <summary>
+        /// 
+        /// </summary>
         public bool Running => m_running;
 
         static ISignaling CreateSignaling(SignalingSettings settings, SynchronizationContext context)
@@ -85,7 +95,7 @@ namespace Unity.RenderStreaming
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <returns></returns>
         public SignalingSettings GetSignalingSettings()
@@ -187,11 +197,17 @@ namespace Unity.RenderStreaming
             {
                 if (!EvaluateCommandlineArguments(ref settings, arguments))
                 {
-                    Debug.LogError("Command line arguments are invalid.");
+                    RenderStreaming.Logger.Log(LogType.Error, "Command line arguments are invalid.");
                 }
             }
 #endif
-            RTCIceServer[] iceServers = settings.iceServers.OfType<RTCIceServer>().ToArray();
+            int i = 0;
+            RTCIceServer[] iceServers = new RTCIceServer[settings.iceServers.Count()];
+            foreach (var iceServer in settings.iceServers)
+            {
+                iceServers[i] = (RTCIceServer)iceServer;
+                i++;
+            }
             RTCConfiguration _conf =
                 conf.GetValueOrDefault(new RTCConfiguration { iceServers = iceServers });
 
@@ -265,7 +281,13 @@ namespace Unity.RenderStreaming
                 return;
 
             var settings = m_useDefault ? RenderStreaming.GetSignalingSettings<SignalingSettings>() : signalingSettings;
-            RTCIceServer[] iceServers = settings.iceServers.OfType<RTCIceServer>().ToArray();
+            int i = 0;
+            RTCIceServer[] iceServers = new RTCIceServer[settings.iceServers.Count()];
+            foreach (var iceServer in settings.iceServers)
+            {
+                iceServers[i] = (RTCIceServer)iceServer;
+                i++;
+            }
             RTCConfiguration conf = new RTCConfiguration { iceServers = iceServers };
             ISignaling signaling = CreateSignaling(settings, SynchronizationContext.Current);
             _Run(conf, signaling, handlers.ToArray());

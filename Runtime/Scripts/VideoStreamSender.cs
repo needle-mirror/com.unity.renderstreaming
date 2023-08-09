@@ -1,11 +1,11 @@
-using Unity.WebRTC;
-using UnityEngine;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine.Rendering;
+using Unity.WebRTC;
+using UnityEngine;
 using UnityEngine.Experimental.Rendering;
+using UnityEngine.Rendering;
 
 namespace Unity.RenderStreaming
 {
@@ -114,11 +114,22 @@ namespace Unity.RenderStreaming
     public class VideoStreamSender : StreamSenderBase
     {
         static readonly float s_defaultFrameRate = 30;
-
         static readonly uint s_defaultMinBitrate = 0;
         static readonly uint s_defaultMaxBitrate = 1000;
-
         static readonly int s_defaultDepth = 16;
+
+        internal const string SourcePropertyName = nameof(m_Source);
+        internal const string CameraPropertyName = nameof(m_Camera);
+        internal const string TexturePropertyName = nameof(m_Texture);
+        internal const string WebCamDeviceIndexPropertyName = nameof(m_WebCamDeviceIndex);
+        internal const string CodecPropertyName = nameof(m_Codec);
+        internal const string TextureSizePropertyName = nameof(m_TextureSize);
+        internal const string FrameRatePropertyName = nameof(m_FrameRate);
+        internal const string BitratePropertyName = nameof(m_Bitrate);
+        internal const string ScaleFactorPropertyName = nameof(m_ScaleFactor);
+        internal const string DepthPropertyName = nameof(m_Depth);
+        internal const string AntiAliasingPropertyName = nameof(m_AntiAliasing);
+        internal const string AutoRequestUserAuthorizationPropertyName = nameof(m_AutoRequestUserAuthorization);
 
         //todo(kazuki): remove this value.
         [SerializeField, StreamingSize]
@@ -246,7 +257,7 @@ namespace Unity.RenderStreaming
         {
             get
             {
-                if(m_sourceImpl is VideoStreamSourceWebCam source)
+                if (m_sourceImpl is VideoStreamSourceWebCam source)
                 {
                     return source.webCamTexture;
                 }
@@ -515,7 +526,7 @@ namespace Unity.RenderStreaming
 
                     if (m_renderTexture.graphicsFormat != format)
                     {
-                        Debug.LogWarning(
+                        RenderStreaming.Logger.Log(LogType.Warning,
                             $"This color format:{m_renderTexture.graphicsFormat} not support in unity.webrtc. Change to supported color format:{format}.");
                         m_renderTexture.Release();
                         m_renderTexture.graphicsFormat = format;
@@ -793,7 +804,7 @@ namespace Unity.RenderStreaming
 
             public override void Dispose()
             {
-                if(m_coroutineConvertFrame != null)
+                if (m_coroutineConvertFrame != null)
                 {
                     m_parent.StopCoroutine(m_coroutineConvertFrame);
                     m_parent = null;

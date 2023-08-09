@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.WebRTC;
-using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
@@ -15,7 +14,7 @@ namespace Unity.RenderStreaming.InputSystem
     /// <summary>
     ///
     /// </summary>
-    class Receiver : InputManager, IDisposable
+    partial class Receiver : InputManager, IDisposable
     {
         public override event Action<InputRemoting.Message> onMessage;
         public new event Action<InputDevice, InputDeviceChange> onDeviceChange;
@@ -28,6 +27,7 @@ namespace Unity.RenderStreaming.InputSystem
         private readonly List<string> _registeredRemoteLayout = new List<string>();
         private InputPositionCorrector _corrector;
         private Action<InputEventPtr, InputDevice> _onEvent;
+
         /// <summary>
         /// 
         /// </summary>
@@ -160,7 +160,7 @@ namespace Unity.RenderStreaming.InputSystem
 
         public override void RemoveLayout(string name)
         {
-            if(_registeredRemoteLayout.Contains(name))
+            if (_registeredRemoteLayout.Contains(name))
             {
                 base.RemoveLayout(name);
                 _registeredRemoteLayout.Remove(name);
@@ -181,6 +181,18 @@ namespace Unity.RenderStreaming.InputSystem
             else
             {
                 base.QueueEvent(ptr);
+            }
+
+            // workaround:
+            // UnityEngine.UI.InputField and TMP_InputField depends on Event.PopEvent.
+            // Event.PopEvent is old event API, therefore EventSystem.QueueEvent doesn't queue events.
+            var eventType = ptr.type;
+            if (device is Keyboard &&
+                (eventType == StateEvent.Type ||
+                eventType == DeltaStateEvent.Type ||
+                eventType == TextEvent.Type))
+            {
+                EmulateInputFieldEvent(ptr);
             }
         }
 

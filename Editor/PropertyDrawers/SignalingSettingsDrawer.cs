@@ -43,7 +43,9 @@ namespace Unity.RenderStreaming.Editor
             var settings = fieldInfo.GetValue(property.serializedObject.targetObject) as SignalingSettings;
             var defaultValue = CustomSignalingSettingsEditor.FindLabelByInspectedType(settings.GetType());
             var choices = CustomSignalingSettingsEditor.Labels().ToList();
-            return new PopupField<string>(label: label, choices: choices, defaultValue: defaultValue);
+            var field = new PopupField<string>(label: label, choices: choices, defaultValue: defaultValue);
+            field.tooltip = "Choose the signaling type. \"WebSocket\" or \"HTTP Polling\".";
+            return field;
         }
 
         static void ReplaceVisualElement(VisualElement oldValue, VisualElement newValue)
@@ -67,7 +69,7 @@ namespace Unity.RenderStreaming.Editor
 
         void OnPopupFieldValueChange(ChangeEvent<string> e, SerializedProperty property)
         {
-            if(!(fieldInfo.GetValue(property.serializedObject.targetObject) is SignalingSettings settings))
+            if (!(fieldInfo.GetValue(property.serializedObject.targetObject) is SignalingSettings settings))
                 return;
 
             // cache current settings.
@@ -128,18 +130,6 @@ namespace Unity.RenderStreaming.Editor
 
     [CustomSignalingSettingsEditor(typeof(WebSocketSignalingSettings), "WebSocket")]
     internal class WebSocketSignalingSettingsEditor : ISignalingSettingEditor
-    {
-        public VisualElement CreateInspectorGUI(SerializedProperty property)
-        {
-            VisualElement root = new VisualElement();
-            root.Add(new PropertyField(property.FindPropertyRelative("m_url"), "URL"));
-            root.Add(new PropertyField(property.FindPropertyRelative("m_iceServers"), "ICE Servers"));
-            return root;
-        }
-    }
-
-    [CustomSignalingSettingsEditor(typeof(FurioosSignalingSettings), "Furioos")]
-    internal class FurioosSignalingSettingsEditor : ISignalingSettingEditor
     {
         public VisualElement CreateInspectorGUI(SerializedProperty property)
         {

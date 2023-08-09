@@ -27,9 +27,10 @@ namespace Unity.RenderStreaming
         /// </summary>
         public string url => m_url;
 
-        [SerializeField]
+        [SerializeField, Tooltip("Set the signaling server URL. you should specify a URL starting with \"ws\" or \"wss\".")]
         protected string m_url;
-        [SerializeField]
+
+        [SerializeField, Tooltip("Set a list of STUN/TURN servers.")]
         protected IceServer[] m_iceServers;
 
         /// <summary>
@@ -74,9 +75,9 @@ namespace Unity.RenderStreaming
             {
                 CommandLineInfo info = CommandLineParser.ImportJson.Value.Value;
 
-                if(info.signalingUrl != null)
+                if (info.signalingUrl != null)
                     m_url = info.signalingUrl;
-                if(info.iceServers != null && info.iceServers.Length != 0)
+                if (info.iceServers != null && info.iceServers.Length != 0)
                     m_iceServers = info.iceServers.Select(v => new IceServer(v)).ToArray();
             }
             if (CommandLineParser.SignalingUrl.Value != null)
@@ -95,12 +96,12 @@ namespace Unity.RenderStreaming
                 ? CommandLineParser.IceServerUrls.Value
                 : null;
 
-            if(m_iceServers.Length > 0)
+            if (m_iceServers.Length > 0)
                 m_iceServers[0] = m_iceServers[0].Clone(
-                    username:username,
-                    credential:credential,
+                    username: username,
+                    credential: credential,
                     credentialType: credentialType,
-                    urls:urls);
+                    urls: urls);
             else
                 m_iceServers = new IceServer[]
                     {

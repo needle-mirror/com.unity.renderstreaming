@@ -31,15 +31,16 @@ This version of Render Streaming is compatible with the following versions of th
 
 - **Unity 2020.3**
 - **Unity 2021.3**
-- **Unity 2022.2**
+- **Unity 2022.3**
+- **Unity 2023.1**
 
 ### Platform
 
-- **Windows**
+- **Windows** (x64 only)
 - **Linux**
-- **macOS**
+- **macOS**  (**Intel** and **Apple Slicon**)
 - **iOS**
-- **Android** (**ARMv7** is not supported)
+- **Android** (**ARM64** only. **ARMv7** is not supported)
 
 > [!NOTE]
 > This package depends on [the WebRTC package](https://docs.unity3d.com/Packages/com.unity.webrtc@3.0). If you build for mobile platform (iOS/Android), please see [the package documentation](https://docs.unity3d.com/Packages/com.unity.webrtc@3.0/manual/requirements.html#additional-notes) to know the requirements for building.
@@ -64,9 +65,3 @@ Unity Render Streaming supports almost all browsers that can use WebRTC.
 ## Samples
 
 Please check [this page](samples.md).
-
-## Furioos compatibility
-
-Unity provides **[Furioos](https://www.furioos.com)** which is a web service to stream any 3D contents on any devices in real-time.
-
-This version of Unity Render Streaming doesn't support Furioos integration.

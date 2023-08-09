@@ -1,6 +1,6 @@
 #if UNITY_EDITOR
-using UnityEngine;
 using UnityEditor;
+using UnityEngine;
 
 namespace Unity.RenderStreaming.Editor
 {
@@ -19,8 +19,8 @@ namespace Unity.RenderStreaming.Editor
 
         void OnEnable()
         {
-            m_codec = serializedObject.FindProperty("m_Codec");
-            m_targetAudioSource = serializedObject.FindProperty("m_TargetAudioSource");
+            m_codec = serializedObject.FindProperty(AudioStreamReceiver.CodecPropertyName);
+            m_targetAudioSource = serializedObject.FindProperty(AudioStreamReceiver.TargetAudioSourcePropertyName);
         }
 
         void OnDisable()

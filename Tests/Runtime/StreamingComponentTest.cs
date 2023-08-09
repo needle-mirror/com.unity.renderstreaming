@@ -1,14 +1,14 @@
 using System;
-using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using Unity.Collections;
-using UnityEngine;
 using Unity.WebRTC;
-using UnityEngine.TestTools;
+using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Users;
+using UnityEngine.TestTools;
 
 namespace Unity.RenderStreaming.RuntimeTest
 {
@@ -23,7 +23,7 @@ namespace Unity.RenderStreaming.RuntimeTest
             Assert.That(codecs.Any(codec => codec.name == "VP9"));
             Assert.That(codecs.Any(codec => codec.name == "AV1"));
 
-            foreach(var codec in codecs)
+            foreach (var codec in codecs)
             {
                 Assert.That(codec.name, Is.Not.Empty);
                 Assert.That(codec.mimeType, Is.Not.Empty);
@@ -298,7 +298,7 @@ namespace Unity.RenderStreaming.RuntimeTest
         {
             IEnumerable<AudioCodecInfo> codecs = AudioStreamSender.GetAvailableCodecs();
             Assert.That(codecs, Is.Not.Empty);
-            foreach(var codec in codecs)
+            foreach (var codec in codecs)
             {
                 Assert.That(codec.name, Is.Not.Empty);
                 Assert.That(codec.mimeType, Is.Not.Empty);
@@ -389,6 +389,29 @@ namespace Unity.RenderStreaming.RuntimeTest
             UnityEngine.Object.DestroyImmediate(go);
         }
 
+        [UnityTest]
+        public IEnumerator AudioLoopback()
+        {
+            var go = new GameObject();
+            var sender = go.AddComponent<AudioStreamSender>();
+
+            sender.source = AudioStreamSource.AudioListener;
+            var audioListener = go.AddComponent<AudioListener>();
+            sender.audioListener = audioListener;
+            var op = sender.CreateTrack();
+            yield return op;
+            var track = op.Track as AudioStreamTrack;
+            Assert.That(track, Is.Not.Null);
+            sender.SetTrack(track);
+
+            sender.loopback = true;
+            Assert.That(track.Loopback, Is.True);
+            sender.loopback = false;
+            Assert.That(track.Loopback, Is.False);
+
+            UnityEngine.Object.DestroyImmediate(go);
+        }
+
         [Test]
         public void SelectCodecCapabilities()
         {
@@ -396,7 +419,6 @@ namespace Unity.RenderStreaming.RuntimeTest
             var caps = RTCRtpSender.GetCapabilities(TrackKind.Audio).SelectCodecCapabilities(codecs);
             Assert.That(codecs.Count(), Is.EqualTo(caps.Count()));
         }
-
 
         [Test]
         public void SetEnabled()
@@ -464,10 +486,10 @@ namespace Unity.RenderStreaming.RuntimeTest
             var sender = go.AddComponent<AudioStreamSender>();
 
             NativeArray<float> nativeArray = new NativeArray<float>(256, Allocator.Temp);
-            Assert.That(() => sender.SetData(ref nativeArray, 2), Throws.Exception.TypeOf<InvalidOperationException>());
+            Assert.That(() => sender.SetData(nativeArray.AsReadOnly(), 2), Throws.Exception.TypeOf<InvalidOperationException>());
 
             sender.source = AudioStreamSource.APIOnly;
-            Assert.That(() => sender.SetData(ref nativeArray, 2), Throws.Nothing);
+            Assert.That(() => sender.SetData(nativeArray.AsReadOnly(), 2), Throws.Nothing);
 
             nativeArray.Dispose();
         }
@@ -569,7 +591,7 @@ namespace Unity.RenderStreaming.RuntimeTest
             Assert.That(receiver.currentActionMap, Is.Null);
             receiver.currentActionMap = new InputActionMap();
             Assert.That(receiver.actionEvents, Is.Not.Null);
-            receiver.actionEvents = new PlayerInput.ActionEvent[]{};
+            receiver.actionEvents = new PlayerInput.ActionEvent[] { };
 
             receiver.SwitchCurrentActionMap(mapName);
 

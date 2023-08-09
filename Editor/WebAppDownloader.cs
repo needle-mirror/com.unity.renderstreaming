@@ -1,13 +1,13 @@
+using System.Net;
 using UnityEditor;
 using UnityEngine;
-using System.Net;
 
 namespace Unity.RenderStreaming.Editor
 {
     internal static class WebAppDownloader
     {
         const string URLRoot = "https://github.com/Unity-Technologies/UnityRenderStreaming";
-        const string LatestKnownVersion = "3.1.0-exp.6";
+        const string LatestKnownVersion = "3.1.0-exp.7";
 
         // TODO::fix release process of webserver runtime.
         const string FileNameWebAppForMac = "webserver_mac";
@@ -53,8 +53,10 @@ namespace Unity.RenderStreaming.Editor
             return System.IO.Path.Combine(URLRoot, string.Format(PathWebAppSourceCode, version));
         }
 
-        public static void DownloadCurrentVersionWebApp(string dstPath, System.Action<bool> callback) {
-            GetPackageVersion("com.unity.renderstreaming", (version) => {
+        public static void DownloadCurrentVersionWebApp(string dstPath, System.Action<bool> callback)
+        {
+            GetPackageVersion("com.unity.renderstreaming", (version) =>
+            {
                 DownloadWebApp(version, dstPath, callback);
             });
         }
@@ -75,12 +77,16 @@ namespace Unity.RenderStreaming.Editor
             client.DownloadFileCompleted += (sender, e) =>
             {
                 EditorUtility.ClearProgressBar();
-                if (e.Error != null) {
+                if (e.Error != null)
+                {
                     //Try downloading using the latest known version to work.
-                    if (version != LatestKnownVersion) {
+                    if (version != LatestKnownVersion)
+                    {
                         DownloadWebApp(LatestKnownVersion, dstPath, callback);
-                    } else {
-                        Debug.LogError($"Failed downloading web server from:{url}. Error: {e.Error}");
+                    }
+                    else
+                    {
+                        RenderStreaming.Logger.Log(LogType.Error, $"Failed downloading web server from:{url}. Error: {e.Error}");
                     }
                     callback?.Invoke(false);
                     return;
@@ -88,7 +94,7 @@ namespace Unity.RenderStreaming.Editor
 
                 if (!System.IO.File.Exists(tmpFilePath))
                 {
-                    Debug.LogError($"Download failed. url:{url}");
+                    RenderStreaming.Logger.Log(LogType.Error, $"Download failed. url:{url}");
                     callback?.Invoke(false);
                     return;
                 }
@@ -105,7 +111,7 @@ namespace Unity.RenderStreaming.Editor
             client.DownloadProgressChanged += (object sender, DownloadProgressChangedEventArgs e) =>
             {
                 var progress = e.ProgressPercentage / 100f;
-                if(EditorUtility.DisplayCancelableProgressBar("Downloading", url, progress))
+                if (EditorUtility.DisplayCancelableProgressBar("Downloading", url, progress))
                 {
                     client.CancelAsync();
                 }
@@ -121,7 +127,7 @@ namespace Unity.RenderStreaming.Editor
                 var packageInfo = req.FindPackage(packageName);
                 if (null == packageInfo)
                 {
-                    Debug.LogError($"Not found package \"{packageName}\"");
+                    RenderStreaming.Logger.Log(LogType.Error, $"Not found package \"{packageName}\"");
                     return;
                 }
                 callback(packageInfo.version);

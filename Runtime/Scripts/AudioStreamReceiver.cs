@@ -1,6 +1,6 @@
 using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.WebRTC;
 using UnityEngine;
 
@@ -12,6 +12,9 @@ namespace Unity.RenderStreaming
     [AddComponentMenu("Render Streaming/Audio Stream Receiver")]
     public class AudioStreamReceiver : StreamReceiverBase
     {
+        internal const string CodecPropertyName = nameof(m_Codec);
+        internal const string TargetAudioSourcePropertyName = nameof(m_TargetAudioSource);
+
         /// <summary>
         /// 
         /// </summary>

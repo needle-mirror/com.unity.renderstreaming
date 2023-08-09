@@ -48,7 +48,7 @@ namespace Unity.RenderStreaming
             {
                 RemoveReceiver(connectionId, receiver);
             }
-            foreach (var channel in streams.OfType<IDataChannel>())
+            foreach (var channel in streams.OfType<IDataChannel>().Where(c => c.ConnectionId == connectionId))
             {
                 RemoveChannel(connectionId, channel);
             }
@@ -65,7 +65,7 @@ namespace Unity.RenderStreaming
         {
             if (connectionIds.Contains(data.connectionId))
             {
-                Debug.Log($"Already answered this connectionId : {data.connectionId}");
+                RenderStreaming.Logger.Log($"Already answered this connectionId : {data.connectionId}");
                 return;
             }
             connectionIds.Add(data.connectionId);

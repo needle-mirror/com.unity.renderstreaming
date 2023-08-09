@@ -1,7 +1,7 @@
 using System;
-using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Collections;
 using Unity.WebRTC;
 using UnityEngine;
@@ -40,6 +40,15 @@ namespace Unity.RenderStreaming
         static readonly uint s_defaultMinBitrate = 0;
         static readonly uint s_defaultMaxBitrate = 200;
 
+        internal const string SourcePropertyName = nameof(m_Source);
+        internal const string AudioSourcePropertyName = nameof(m_AudioSource);
+        internal const string AudioListenerPropertyName = nameof(m_AudioListener);
+        internal const string MicrophoneDeviceIndexPropertyName = nameof(m_MicrophoneDeviceIndex);
+        internal const string AutoRequestUserAuthorizationPropertyName = nameof(m_AutoRequestUserAuthorization);
+        internal const string CodecPropertyName = nameof(m_Codec);
+        internal const string BitratePropertyName = nameof(m_Bitrate);
+        internal const string LoopbackPropertyName = nameof(m_Loopback);
+
         [SerializeField]
         private AudioStreamSource m_Source;
 
@@ -60,6 +69,9 @@ namespace Unity.RenderStreaming
 
         [SerializeField, Bitrate(0, 1000)]
         private Range m_Bitrate = new Range(s_defaultMinBitrate, s_defaultMaxBitrate);
+
+        [SerializeField]
+        private bool m_Loopback = false;
 
         private int m_sampleRate = 0;
 
@@ -112,7 +124,32 @@ namespace Unity.RenderStreaming
         }
 
         /// <summary>
-        /// The index of WebCamTexture.devices.
+        /// Play or not sending to remote audio in local.
+        /// </summary>
+        public bool loopback
+        {
+            get
+            {
+                return m_Loopback;
+            }
+            set
+            {
+                if (m_Loopback == value)
+                {
+                    return;
+                }
+
+                m_Loopback = value;
+
+                if (Track is AudioStreamTrack audioTrack)
+                {
+                    audioTrack.Loopback = value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// The index of Microphone.devices.
         /// </summary>
         public int sourceDeviceIndex
         {
@@ -197,7 +234,7 @@ namespace Unity.RenderStreaming
             {
                 RTCError error = transceiver.Sender.SetBitrate(m_Bitrate.min, m_Bitrate.max);
                 if (error.errorType != RTCErrorType.None)
-                    Debug.LogError(error.message);
+                    RenderStreaming.Logger.Log(LogType.Error, error.message);
             }
         }
 
@@ -294,13 +331,13 @@ namespace Unity.RenderStreaming
             base.OnDisable();
         }
 
-        public void SetData(ref NativeArray<float> nativeArray, int channels)
+        public void SetData(NativeArray<float>.ReadOnly nativeArray, int channels)
         {
             if (m_Source != AudioStreamSource.APIOnly)
                 throw new InvalidOperationException("To use this method, please set AudioStreamSource.APIOnly to source property");
             if (!isPlaying)
                 return;
-            (m_sourceImpl as AudioStreamSourceAPIOnly)?.SetData(ref nativeArray, channels, m_sampleRate);
+            (m_sourceImpl as AudioStreamSourceAPIOnly)?.SetData(nativeArray, channels, m_sampleRate);
         }
 
         abstract class AudioStreamSourceImpl : IDisposable
@@ -466,13 +503,13 @@ namespace Unity.RenderStreaming
             {
                 var instruction = new WaitForCreateTrack();
                 m_audioTrack = new AudioStreamTrack();
-                instruction.Done(new AudioStreamTrack());
+                instruction.Done(m_audioTrack);
                 return instruction;
             }
 
-            public void SetData(ref NativeArray<float> nativeArray, int channels, int sampleRate)
+            public void SetData(NativeArray<float>.ReadOnly nativeArray, int channels, int sampleRate)
             {
-                m_audioTrack?.SetData(ref nativeArray, channels, sampleRate);
+                m_audioTrack?.SetData(nativeArray, channels, sampleRate);
             }
 
             public override void Dispose()

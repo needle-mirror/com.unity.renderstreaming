@@ -4,7 +4,28 @@ All notable changes to com.unity.renderstreaming package will be documented in t
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [3.1.0-exp.6] - 2023-2-24
+## [3.1.0-exp.7] - 2023-08-09
+
+### Added
+
+- Added configurable logger to enable users to customize logging for their environment.
+
+### Changed
+
+- Upgrade the version of WebRTC package `3.0.0-pre.6`.
+- Add `AudioStreamSender.loopback` property.
+
+### Fixed
+
+- Fixed error on HTTP signaling when using short polling interval.
+- Fixed `SignalingManager` so that ICE server configurations aren't effected.
+- Added a workaround to fix an issue where `InputField` wasn't worked when entering characters from browsers or a `Receiver` scene of package sample.
+
+### Removed
+
+- Removed Furioos Integration.
+
+## [3.1.0-exp.6] - 2023-02-24
 
 ### Added
 
@@ -20,7 +41,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Websocket is in default for signaling protocol instead of HTTP polling.
 - Changed a unit of the HTTP polling interval, second to millisecond.
 
-## [3.1.0-exp.5] - 2023-1-16
+## [3.1.0-exp.5] - 2023-01-16
 
 ### Changed
 

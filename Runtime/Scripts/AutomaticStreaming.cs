@@ -85,7 +85,8 @@ namespace Unity.RenderStreaming
                 }
 
                 var nativeArray = new NativeArray<float>(data, Allocator.Temp);
-                sender.SetData(ref nativeArray, channels);
+                sender.SetData(nativeArray.AsReadOnly(), channels);
+                nativeArray.Dispose();
             }
 
             private void OnDestroy()

@@ -60,7 +60,7 @@ namespace Unity.RenderStreaming.Editor
         {
             if (s_Instance == null)
             {
-                Debug.Log("Cannot save ScriptableSingleton: no instance!");
+                RenderStreaming.Logger.Log("Cannot save ScriptableSingleton: no instance!");
                 return;
             }
 
@@ -70,7 +70,7 @@ namespace Unity.RenderStreaming.Editor
                 Directory.CreateDirectory(folderPath);
             }
 
-            InternalEditorUtility.SaveToSerializedFileAndForget(new Object[] {s_Instance}, filePath,
+            InternalEditorUtility.SaveToSerializedFileAndForget(new Object[] { s_Instance }, filePath,
                 allowTextSerialization: true);
         }
     }
